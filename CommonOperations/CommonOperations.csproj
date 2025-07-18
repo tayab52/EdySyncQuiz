@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Encryption\" />
     <Folder Include="Methods\" />
     <Folder Include="Enums\" />
   </ItemGroup>

@@ -11,25 +11,18 @@ namespace Application.DataTransferModels.ResponseModel
         public int StatusCode { get; set; }
         public string? ResponseMessage { get; set; } = "";
         public string? ErrorMessage { get; set; } = "";
-        public dynamic Data { get; set; }
+        public dynamic Data { get; set; } = null;
 
-        private static ResponseVM instance = null;
-
-        private ResponseVM() // Private constructor to prevent instantiation from outside the class
+        public ResponseVM() 
         {
         }
 
-        public static ResponseVM Instance
+        public ResponseVM(int statusCode, string? responseMessage = "", string? errorMessage = "", dynamic data = null)
         {
-            get // Singleton pattern to ensure only one instance of ResponseVM is created
-            {
-                if (instance == null)
-                {
-                    instance = new ResponseVM();
-                }
-                return instance;
-            }
+            StatusCode = statusCode;
+            ResponseMessage = responseMessage;
+            ErrorMessage = errorMessage;
+            Data = data;
         }
-
     }
 }

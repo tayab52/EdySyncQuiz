@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using PresentationAPI.InjectServices;
+using PresentationAPI.Middlewares;
 using System;
 using System.Text;
 
@@ -38,6 +39,8 @@ namespace PresentationAPI
                     };
                 });
 
+            builder.Services.AddHttpContextAccessor();
+
             builder.Services.AddCustomServices();
 
             builder.Services.AddEndpointsApiExplorer();
@@ -66,10 +69,15 @@ namespace PresentationAPI
                 app.UseSwaggerUI();
             }
 
+
+            app.UseRouting();
+
             app.UseHttpsRedirection();
 
-            app.UseAuthorization();
+            app.UseMiddleware<ErrorHandlingMiddleware>();
 
+            app.UseAuthentication();
+            app.UseAuthorization();
 
             app.MapControllers();
 

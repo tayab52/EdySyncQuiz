@@ -11,7 +11,7 @@ namespace Application.Interfaces.User
     public interface IUserService
     {
         Task<ResponseVM> SignUpAsync(RegisterUserVM user);
-        Task<ResponseVM> SignInAsync(LoginUserVM model);
-        Task<ResponseVM> SignOutAsync(string email);
+        Task<ResponseVM> SignInAsync(LoginUserVM user);
+        Task<ResponseVM> GetUserByIdAsync(int userId);
     }
 }
