@@ -1,0 +1,69 @@
+
+# Build Folders
+bin/
+obj/
+
+# Rider/JetBrains
+.idea/
+*.sln.iml
+*.userprefs
+
+# Visual Studio specific
+.vscode/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.userprefs
+*.log
+
+# DotNetCore specifics
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+*.psmdcp
+
+# Logs
+*.log
+
+# Runtime Generated
+logs/
+
+# OS generated files
+[Tt]humbs.db
+*.DS_Store
+
+PresentationApi/appsettings.Development.json
+CrmBuilds/appsettings.json
+CrmBuilds/appsettings.Development.json
+build/appsettings.json
+build/appsettings.Development.json
+Medical_CRM_ClientDBScripts/Medical_CRM_ClientDBScripts.dbmdl
+Medical_CRM_ClientDBScripts/Medical_CRM_ClientDBScripts.jfm
+Medical_CRM_LogsDBScripts/Medical_CRM_LogsDBScripts.dbmdl
+Medical_CRM_LogsDBScripts/Medical_CRM_LogsDBScripts.jfm
+Medical_Crm_MainDBScripts/Medical_Crm_MainDBScripts.dbmdl
+Medical_Crm_MainDBScripts/Medical_Crm_MainDBScripts.jfm
+Medical_CRM_ClientDBScripts/Medical_CRM_ClientDBScripts.dbmdl
+Medical_CRM_LogsDBScripts/Medical_CRM_LogsDBScripts.dbmdl
+Medical_Crm_MainDBScripts/Medical_Crm_MainDBScripts.dbmdl
+Medical_CRM_LogsDBScripts/Medical_CRM_LogsDBScripts.jfm
+Medical_CRM_LogsDBScripts/Medical_CRM_LogsDBScripts.jfm
+Medical_CRM_LogsDBScripts/Medical_CRM_LogsDBScripts.jfm
+
+*.jfm
+*.dbmdl
+*.jfm
+*.dbmdl
+*.jfm
+*.dbmdl
+*.jfm
+*.jfm
+*.dbmdl
+*.jfm
