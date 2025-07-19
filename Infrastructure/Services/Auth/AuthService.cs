@@ -66,42 +66,42 @@ namespace Infrastructure.Services.Auth
             return tokenHandler.WriteToken(securityToken);
         }
 
-        public async Task<ResponseVM> ResendOTP(string email, string? operation = "resend-otp")
+        public Task<ResponseVM> ResendOTP(string email, string? operation = "resend-otp")
         {
             var response = new ResponseVM();
             var normalizedEmail = email.Trim().ToLowerInvariant();
-            var user = await _clientDBContext.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
+            var user = _clientDBContext.Users.FirstOrDefault(u => u.Email.ToLower() == normalizedEmail);
 
             if (user == null)
             {
-                return new ResponseVM
+                return Task.FromResult(new ResponseVM
                 {
                     StatusCode = ResponseCode.NotFound,
                     ErrorMessage = "User not found."
-                };
+                });
             }
             if (user.IsActive && operation != "forgot-password")
             {
-                return new ResponseVM
+                return Task.FromResult(new ResponseVM
                 {
                     StatusCode = ResponseCode.BadRequest,
                     ErrorMessage = "User is already active."
-                };
+                });
             }
 
             string subject = operation == "forgot-password" ? "Reset OTP for TopicTap account" : "Resend OTP for TopicTap";
-            var otpResponse = await SendOTP(email, subject);
+            var otpResponse = SendOTP(email, subject);
 
-            if (otpResponse.StatusCode != ResponseCode.Success)
+            if (otpResponse.Result.StatusCode != ResponseCode.Success)
                 return otpResponse;
 
-            if (otpResponse.Data is not long otp)
+            if (otpResponse.Result.Data is not long otp)
             {
-                return new ResponseVM
+                return Task.FromResult(new ResponseVM
                 {
                     StatusCode = ResponseCode.BadRequest,
                     ErrorMessage = "Invalid OTP value returned."
-                };
+                });
             }
 
             user.OTP = otp;
@@ -109,26 +109,26 @@ namespace Infrastructure.Services.Auth
 
             try
             {
-                await _clientDBContext.SaveChangesAsync();
-                return new ResponseVM
+                _clientDBContext.SaveChanges();
+                return Task.FromResult(new ResponseVM
                 {
                     StatusCode = ResponseCode.Success,
                     ResponseMessage =  operation == "forgot-password" 
                                                     ? "OTP to reset account sent successfully"
                                                     : "OTP resent successfully."
-                };
+                });
             }
-            catch (Exception ex)
+            catch
             {
-                return new ResponseVM
+                return Task.FromResult(new ResponseVM
                 {
                     StatusCode = ResponseCode.BadRequest,
                     ErrorMessage = "Failed to update user OTP."
-                };
+                });
             }
         }
 
-        public async Task<ResponseVM> SendOTP(string email, string? subject = "Welcome To TopicTap")
+        public Task<ResponseVM> SendOTP(string email, string? subject = "Welcome To TopicTap")
         {
             ResponseVM response = new ResponseVM();
             long OTP = Methods.GenerateOTP();
@@ -138,7 +138,7 @@ namespace Infrastructure.Services.Auth
 
             try
             {
-                await SendEmailAsync(email, emailSubject, emailBody);
+                SendEmail(email, emailSubject, emailBody);
                 response.StatusCode = ResponseCode.Success;
                 response.Data = OTP;
             }
@@ -147,23 +147,23 @@ namespace Infrastructure.Services.Auth
                 response.StatusCode = ResponseCode.BadRequest;
                 response.ResponseMessage = "Failed to send email: " + ex.Message;
             }
-            return response;
+            return Task.FromResult(response);
         }
 
-        public async Task<ResponseVM> VerifyOTP(string email, long otp)
+        public Task<ResponseVM> VerifyOTP(string email, long otp)
         {
             ResponseVM response = new ResponseVM();
-            var user = await _clientDBContext.Users.FirstOrDefaultAsync(u => u.Email == email);
+            var user = _clientDBContext.Users.FirstOrDefault(u => u.Email == email);
             if (user == null)
             {
                 response.StatusCode = ResponseCode.NotFound;
                 response.ErrorMessage = "User not found.";
-                return response;
+                return Task.FromResult(response);
             }
             if (user.OTP == otp && user.OTPExpiry > DateTime.UtcNow)
             {
                 user.IsActive = true;
-                await _clientDBContext.SaveChangesAsync();
+                _clientDBContext.SaveChanges();
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "OTP verified successfully.";
             }
@@ -172,10 +172,10 @@ namespace Infrastructure.Services.Auth
                 response.StatusCode = ResponseCode.BadRequest;
                 response.ErrorMessage = "Invalid or expired OTP.";
             }
-            return response;
+            return Task.FromResult(response);
         }
 
-        public async Task<ResponseVM> SendEmailAsync(string toEmail, string subject, string body)
+        public Task<ResponseVM> SendEmail(string toEmail, string subject, string body)
         {
             string smtpServer = _config["SmtpSettings:Server"];
             int smtpPort = Convert.ToInt32(_config["SmtpSettings:Port"]);
@@ -210,33 +210,34 @@ namespace Infrastructure.Services.Auth
                 smtpClient.Send(message);
                 smtpClient.Disconnect(true);
             }
-            return response;
+            return Task.FromResult(response);
         }
 
-        public async Task<ResponseVM> ResetPasswordAsync(string email, long OTP, string newPassword)
+        public Task<ResponseVM> ResetPassword(string email, long OTP, string newPassword)
         {
             var response = new ResponseVM();
-            var user = await _clientDBContext.Users.FirstOrDefaultAsync(u => u.Email == email);
+            var user = _clientDBContext.Users.FirstOrDefault(u => u.Email == email);
             if (user == null)
             {
-                return new ResponseVM
+                return Task.FromResult(new ResponseVM
                 {
                     StatusCode = ResponseCode.NotFound,
                     ErrorMessage = "User not found."
-                };
+                });
             }
             if (user.OTP != OTP || user.OTPExpiry < DateTime.UtcNow)
             {
-                return new ResponseVM
+                return Task.FromResult(new ResponseVM
                 {
                     StatusCode = ResponseCode.BadRequest,
                     ErrorMessage = "Invalid or expired OTP."
-                };
+                });
             }
-            user.Password = Encryption.EncryptPassword(newPassword); 
+            user.Password = Encryption.EncryptPassword(newPassword);
+            user.OTP = 0;
             try
             {
-                await _clientDBContext.SaveChangesAsync();
+                _clientDBContext.SaveChanges();
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "Password reset successfully.";
             }
@@ -245,7 +246,7 @@ namespace Infrastructure.Services.Auth
                 response.StatusCode = ResponseCode.BadRequest;
                 response.ErrorMessage = "Failed to reset password: " + ex.Message;
             }
-            return response;
+            return Task.FromResult(response);
         }
     }
 }

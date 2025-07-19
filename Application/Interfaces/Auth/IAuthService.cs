@@ -14,7 +14,7 @@ namespace Application.Interfaces.Auth
         Task<ResponseVM> ResendOTP(string email, string? operation = "resend-otp");
         Task<ResponseVM> VerifyOTP(string email, long otp);
         string GenerateJWT(Domain.Models.Entities.Users.User user);
-        Task<ResponseVM> SendEmailAsync(string to, string subject, string body);
-        Task<ResponseVM> ResetPasswordAsync(string email, long OTP,string newPassword);
+        Task<ResponseVM> SendEmail(string to, string subject, string body);
+        Task<ResponseVM> ResetPassword(string email, long OTP,string newPassword);
     }
 }

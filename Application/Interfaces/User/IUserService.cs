@@ -10,10 +10,10 @@ namespace Application.Interfaces.User
 {
     public interface IUserService
     {
-        Task<ResponseVM> SignUpAsync(RegisterUserVM user);
-        Task<ResponseVM> SignInAsync(LoginUserVM user);
-        Task<ResponseVM> GetUserByIdAsync(int userId);
-        Task<ResponseVM> ChangePasswordAsync(ChangePasswordVM user);
-        Task<ResponseVM> DeleteUserAsync(int userId);
+        Task<ResponseVM> SignUp(RegisterUserVM user);
+        Task<ResponseVM> SignIn(LoginUserVM user);
+        Task<ResponseVM> GetUserById(int userId);
+        Task<ResponseVM> ChangePassword(ChangePasswordVM user);
+        Task<ResponseVM> DeleteUser(int userId);
     }
 }
