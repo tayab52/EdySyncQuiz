@@ -1,0 +1,69 @@
+﻿<!DOCTYPE html>
+<html lang="" en"">
+<head>
+    <meta charset="" UTF-8"">
+    <title>OTP Email</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            color: #333;
+        }
+
+        p {
+            font-size: 16px;
+            color: #555;
+        }
+
+        .otp {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4682b4;
+        }
+
+        .container #verifyButton {
+            display: block;
+            margin: 0 auto;
+            border: none;
+            background-color: #4682b4;
+            border-color: #4682b4;
+            padding: 0.75rem 0px 0.688rem 0px;
+            width: 21rem;
+            border-radius: 6rem;
+            margin-top: 1rem;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="" container"">
+        <h2>Hello {FirstName},</h2>
+        <p>You requested to reset your password. Use the OTP below to proceed:</p>
+        <p class="" otp"">{otp}</p>
+        <p>This OTP is valid for 5 minutes.</p>
+
+        <div>
+            <a href="" {token}"" style="" text-decoration: none;"">
+                <button id="" verifyButton"" type="" button"">Change password</button>
+            </a>
+        </div>
+        <p>If you did not request this, please ignore this email.</p>
+        <br />
+        <p>Thanks,<br />BillFins Team</p>
+    </div>
+</body>
+</html>
+"

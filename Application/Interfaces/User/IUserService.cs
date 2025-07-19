@@ -13,5 +13,7 @@ namespace Application.Interfaces.User
         Task<ResponseVM> SignUpAsync(RegisterUserVM user);
         Task<ResponseVM> SignInAsync(LoginUserVM user);
         Task<ResponseVM> GetUserByIdAsync(int userId);
+        Task<ResponseVM> ChangePasswordAsync(ChangePasswordVM user);
+        Task<ResponseVM> DeleteUserAsync(int userId);
     }
 }
