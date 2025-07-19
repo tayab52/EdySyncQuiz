@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using PresentationAPI.InjectServices;
 using PresentationAPI.Middlewares;
-using System;
 using System.Text;
 
 namespace PresentationAPI

@@ -1,5 +1,5 @@
-﻿using Domain.Models.Entities.Users;
-using Application.DataTransferModels.UserViewModels;
+﻿using Application.DataTransferModels.UserViewModels;
+using Domain.Models.Entities.Users;
 
 namespace Application.Mapppers
 {

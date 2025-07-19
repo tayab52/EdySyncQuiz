@@ -3,24 +3,12 @@ using Application.DataTransferModels.UserViewModels;
 using Application.Interfaces.Auth;
 using Application.Interfaces.User;
 using Application.Mapppers;
-using Azure;
 using CommonOperations.Constants;
 using CommonOperations.Encryption;
 using CommonOperations.Methods;
 using Infrastructure.Context;
-using Infrastructure.Services.Auth;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Security.Claims;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
-using static System.Net.WebRequestMethods;
 
 namespace Infrastructure.Services.User
 {
@@ -37,9 +25,9 @@ namespace Infrastructure.Services.User
             _clientDBContext = clientDBContext;
         }
 
-        public Task<ResponseVM> SignUp(RegisterUserVM user)
+        public ResponseVM SignUp(RegisterUserVM user)
         {
-            ResponseVM response = new ResponseVM();
+            ResponseVM response = ResponseVM.Instance;
 
             if (!string.IsNullOrWhiteSpace(user.Username)
                 && !string.IsNullOrWhiteSpace(user.Email)
@@ -50,28 +38,32 @@ namespace Infrastructure.Services.User
                 {
                     response.StatusCode = ResponseCode.Conflict;
                     response.ErrorMessage = "Error Signing Up! Email already in use.";
-                    return Task.FromResult(response);
+					response.ResponseMessage = "";
+					response.Data = null;
+                    return response;
                 }
 
                 if (!Methods.IsValidEmailFormat(user.Email))
                 {
                     response.StatusCode = ResponseCode.BadRequest;
                     response.ErrorMessage = "Invalid Email Format";
-                    return Task.FromResult(response);
+					response.ResponseMessage = "";
+					response.Data = null;
+					return response;
                 }
 
-                var otpTask = _authService.SendOTP(user.Email);
-                otpTask.Wait();
-                response = otpTask.Result;
+                response = _authService.SendOTP(user.Email);
 
-                if (response is not ResponseVM otpResponse || otpResponse.StatusCode != ResponseCode.Success)
+                if (response.StatusCode != ResponseCode.Success)
                 {
                     response.StatusCode = ResponseCode.BadRequest;
                     response.ErrorMessage = "Failed to send OTP. Please try again.";
-                    return Task.FromResult(response);
+                    response.ResponseMessage = "";
+                    response.Data = null;
+					return response;
                 }
 
-                try
+				try
                 {
                     Domain.Models.Entities.Users.User userToSave = user.ToDomainModel();
                     userToSave.OTP = response.Data;
@@ -82,24 +74,29 @@ namespace Infrastructure.Services.User
                     response.StatusCode = ResponseCode.Success;
                     response.ResponseMessage = "User Created Successfully";
                     response.Data = result.Entity.UserID;
+                    response.ErrorMessage = "";
                 }
                 catch (Exception ex)
                 {
                     response.StatusCode = ResponseCode.BadRequest;
                     response.ErrorMessage = "Failed to Create User: " + ex.Message;
-                }
+					response.ResponseMessage = "";
+					response.Data = null;
+				}
             }
             else
             {
                 response.StatusCode = ResponseCode.BadRequest;
                 response.ErrorMessage = "Error Signing Up! Username, Email and Password are required!";
-            }
-            return Task.FromResult(response);
+				response.ResponseMessage = "";
+				response.Data = null;
+			}
+            return response;
         }
 
-        public Task<ResponseVM> SignIn(LoginUserVM user)
+        public ResponseVM SignIn(LoginUserVM user)
         {
-            var response = new ResponseVM();
+            ResponseVM response = ResponseVM.Instance;
 
             if (!string.IsNullOrWhiteSpace(user.Email) && !string.IsNullOrWhiteSpace(user.Password))
             {
@@ -107,24 +104,24 @@ namespace Infrastructure.Services.User
                 {
                     var existingUser = _clientDBContext.Users        // Check User Password by Encrypting and Checking with the one is database
                         .FirstOrDefault(u => u.Email == user.Email && Encryption.EncryptPassword(user.Password) == u.Password);
-                    if(existingUser == null)
+                    if (existingUser == null)
                     {
                         response.StatusCode = ResponseCode.Unauthorized;
                         response.ErrorMessage = "User does not exist.";
-                        return Task.FromResult(response);
+                        return response;
                     }
 
                     if (existingUser.IsDeleted)
                     {
                         response.StatusCode = ResponseCode.Unauthorized;
                         response.ErrorMessage = "User account is deleted.";
-                        return Task.FromResult(response);
+                        return response;
                     }
                     if (!existingUser.IsActive)
                     {
                         response.StatusCode = ResponseCode.Unauthorized;
                         response.ErrorMessage = "User account is not active. Please verify your email.";
-                        return Task.FromResult(response);
+                        return response;
                     }
 
                     if (existingUser != null)
@@ -151,11 +148,12 @@ namespace Infrastructure.Services.User
                 response.StatusCode = ResponseCode.BadRequest;
                 response.ErrorMessage = "Error Signing In! Email and Password are required!";
             }
-            return Task.FromResult(response);
+            return response;
         }
 
-        public Task<ResponseVM> GetUserById(int userId)
+        public ResponseVM GetUserById(int userId)
         {
+            ResponseVM response = ResponseVM.Instance;
             try
             {
                 var user = _httpContextAccessor.HttpContext?.User;
@@ -163,20 +161,16 @@ namespace Infrastructure.Services.User
 
                 if (tokenUserId == null)
                 {
-                    return Task.FromResult(new ResponseVM
-                    {
-                        StatusCode = ResponseCode.Unauthorized,
-                        ErrorMessage = "Token is missing the user ID."
-                    });
+                    response.StatusCode = ResponseCode.BadRequest;
+                    response.ErrorMessage = "Token is missing the user ID.";
+                    return response;
                 }
 
                 if (tokenUserId != userId.ToString())
                 {
-                    return Task.FromResult(new ResponseVM
-                    {
-                        StatusCode = ResponseCode.Forbidden,
-                        ErrorMessage = "You are not allowed to access this user's data."
-                    });
+                    response.StatusCode = ResponseCode.Unauthorized;
+                    response.ErrorMessage = "You are not allowed to access this user's data.";
+                    return response;
                 }
 
                 var userEntity = _clientDBContext.Users
@@ -185,11 +179,9 @@ namespace Infrastructure.Services.User
 
                 if (userEntity == null)
                 {
-                    return Task.FromResult(new ResponseVM
-                    {
-                        StatusCode = ResponseCode.NotFound,
-                        ErrorMessage = "User not found."
-                    });
+                    response.StatusCode = ResponseCode.NotFound;
+                    response.ErrorMessage = "User not found.";
+                    return response;
                 }
 
                 var userDto = new UserDTO
@@ -200,38 +192,33 @@ namespace Infrastructure.Services.User
                     Role = userEntity.Role,
                 };
 
-                return Task.FromResult(new ResponseVM
-                {
-                    StatusCode = ResponseCode.Success,
-                    ResponseMessage = "User fetched successfully.",
-                    Data = userDto
-                });
+                response.StatusCode = ResponseCode.Success;
+                response.ResponseMessage = "User fetched successfully.";
+                response.Data = userDto;
             }
-            catch (Exception ex)
+            catch
             {
-                return Task.FromResult(new ResponseVM
-                {
-                    StatusCode = ResponseCode.InternalServerError,
-                    ErrorMessage = "An error occurred while retrieving the user.",
-                });
+                response.StatusCode = ResponseCode.InternalServerError;
+                response.ErrorMessage = "An error occurred while retrieving the user.";
             }
+            return response;
         }
 
-        public Task<ResponseVM> ChangePassword(ChangePasswordVM user)
+        public ResponseVM ChangePassword(ChangePasswordVM user)
         {
-            ResponseVM response = new ResponseVM();
+            ResponseVM response = ResponseVM.Instance;
             if (user == null || user.UserID <= 0 || string.IsNullOrWhiteSpace(user.OldPassword))
             {
                 response.StatusCode = ResponseCode.BadRequest;
                 response.ErrorMessage = "Invalid User ID or Password";
-                return Task.FromResult(response);
+                return response;
             }
             var existingUser = _clientDBContext.Users.Find(user.UserID);
             if (existingUser == null)
             {
                 response.StatusCode = ResponseCode.NotFound;
                 response.ErrorMessage = "User not found.";
-                return Task.FromResult(response);
+                return response;
             }
             try
             {
@@ -239,13 +226,13 @@ namespace Infrastructure.Services.User
                 {
                     response.StatusCode = ResponseCode.Unauthorized;
                     response.ErrorMessage = "Old Password is incorrect.";
-                    return Task.FromResult(response);
+                    return response;
                 }
                 if (user.NewPassword != user.ConfirmNewPassword)
                 {
                     response.StatusCode = ResponseCode.BadRequest;
                     response.ErrorMessage = "Passwords don't match.";
-                    return Task.FromResult(response);
+                    return response;
                 }
                 existingUser.Password = Encryption.EncryptPassword(user.NewPassword);
                 _clientDBContext.Users.Update(existingUser);
@@ -256,19 +243,19 @@ namespace Infrastructure.Services.User
             catch (Exception ex)
             {
                 response.StatusCode = ResponseCode.InternalServerError;
-                response.ErrorMessage = "Failed to update user: " + ex.Message;
+                response.ErrorMessage = "Failed to update user: ";
             }
-            return Task.FromResult(response);
+            return response;
         }
 
-        public Task<ResponseVM> DeleteUser(int userId)
+        public ResponseVM DeleteUser(int userId)
         {
-            ResponseVM response = new ResponseVM();
+            ResponseVM response = ResponseVM.Instance;
             if (userId <= 0)
             {
                 response.StatusCode = ResponseCode.BadRequest;
                 response.ErrorMessage = "Invalid User ID";
-                return Task.FromResult(response);
+                return response;
             }
             try
             {
@@ -277,9 +264,9 @@ namespace Infrastructure.Services.User
                 {
                     response.StatusCode = ResponseCode.NotFound;
                     response.ErrorMessage = "User not found.";
-                    return Task.FromResult(response);
+                    return response;
                 }
-                existingUser.IsDeleted = true; 
+                existingUser.IsDeleted = true;
                 _clientDBContext.Users.Update(existingUser);
                 _clientDBContext.SaveChanges();
                 response.StatusCode = ResponseCode.Success;
@@ -290,7 +277,7 @@ namespace Infrastructure.Services.User
                 response.StatusCode = ResponseCode.InternalServerError;
                 response.ErrorMessage = "Failed to delete user: " + ex.Message;
             }
-            return Task.FromResult(response);
+            return response;
         }
     }
 }

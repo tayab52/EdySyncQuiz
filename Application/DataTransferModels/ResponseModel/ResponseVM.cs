@@ -1,28 +1,28 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Application.DataTransferModels.ResponseModel
+﻿namespace Application.DataTransferModels.ResponseModel
 {
-    public class ResponseVM
+    public sealed class ResponseVM
     {
         public int StatusCode { get; set; }
         public string? ResponseMessage { get; set; } = "";
         public string? ErrorMessage { get; set; } = "";
         public dynamic Data { get; set; } = null;
 
-        public ResponseVM() 
+        private static ResponseVM instance = null;
+
+        private ResponseVM()
         {
         }
 
-        public ResponseVM(int statusCode, string? responseMessage = "", string? errorMessage = "", dynamic data = null)
+        public static ResponseVM Instance
         {
-            StatusCode = statusCode;
-            ResponseMessage = responseMessage;
-            ErrorMessage = errorMessage;
-            Data = data;
+            get
+            {
+                //if (instance == null)
+                {
+                    instance = new ResponseVM();
+                }
+                return instance;
+            }
         }
     }
 }

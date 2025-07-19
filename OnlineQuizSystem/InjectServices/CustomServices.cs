@@ -1,7 +1,7 @@
-﻿using Infrastructure.Services.User;
+﻿using Application.Interfaces.Auth;
 using Application.Interfaces.User;
-using Application.Interfaces.Auth;
 using Infrastructure.Services.Auth;
+using Infrastructure.Services.User;
 
 namespace PresentationAPI.InjectServices
 {

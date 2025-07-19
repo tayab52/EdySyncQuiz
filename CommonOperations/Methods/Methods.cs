@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace CommonOperations.Methods
+﻿namespace CommonOperations.Methods
 {
     public class Methods
     {
@@ -19,7 +13,7 @@ namespace CommonOperations.Methods
             try
             {
                 var mailAddress = new System.Net.Mail.MailAddress(email);
-                return true; 
+                return true;
             }
             catch
             {

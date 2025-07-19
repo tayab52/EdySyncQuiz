@@ -30,7 +30,7 @@ namespace PresentationAPI.Middlewares
 
         private async Task HandleExceptionAsync(HttpContext context, Exception ex)
         {
-            Console.WriteLine("Middleware Exception: " + ex.Message);
+            ResponseVM response = ResponseVM.Instance;
             var statusCode = (int)HttpStatusCode.InternalServerError;
             var errorMessage = "An unexpected error occurred.";
 
@@ -65,11 +65,8 @@ namespace PresentationAPI.Middlewares
                 return;
             }
 
-            var response = new ResponseVM(
-                statusCode,
-                "", // ResponseMessage
-                errorMessage
-            );
+            response.StatusCode = statusCode;
+            response.ErrorMessage = errorMessage;
 
             context.Response.StatusCode = statusCode;
             context.Response.ContentType = "application/json";
