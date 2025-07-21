@@ -11,6 +11,7 @@ namespace PresentationAPI.InjectServices
         {
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IUserDetailsService, UserDetailsService>();
         }
     }
 }

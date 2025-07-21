@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace Domain.Models.Entities.Users
 {
@@ -16,6 +17,7 @@ namespace Domain.Models.Entities.Users
         public int UserID { get; set; }
 
         [ForeignKey("UserID")]
+        [JsonIgnore]
         public User User { get; set; } = null!;
     }
 }

@@ -15,11 +15,13 @@ namespace PresentationAPI.Controllers.User
     {
         private readonly IUserService _userService;
         private readonly IAuthService _authService;
+        private readonly IUserDetailsService _userDetailsService;
 
-        public UserController(IUserService userService, IAuthService authService)
+        public UserController(IUserService userService, IAuthService authService, IUserDetailsService userDetailsService)
         {
             _userService = userService;
             _authService = authService;
+            _userDetailsService = userDetailsService;
         }
 
         // /api/user/signup
@@ -121,12 +123,14 @@ namespace PresentationAPI.Controllers.User
             return BadRequest(response);
         }
 
+        // /api/user/change-password
+        [Authorize]
         [HttpPost("Change-Password")]
         public IActionResult ChangePassword(ChangePasswordVM user) // Requires Email, Old Password and New Password
-        { 
-            if (user == null || string.IsNullOrEmpty(user.OldPassword) 
+        {
+            if (user == null || string.IsNullOrEmpty(user.OldPassword)
                 || string.IsNullOrEmpty(user.NewPassword) || string.IsNullOrEmpty(user.Email))
-            { 
+            {
                 return BadRequest("Email, Old Password and New Password are required to change the password.");
             }
             ResponseVM response = _userService.ChangePassword(user);
@@ -137,6 +141,7 @@ namespace PresentationAPI.Controllers.User
             return BadRequest(response);
         }
 
+        // /api/user/delete-account/{userID}
         [Authorize]
         [HttpPost("Delete-Account/{UserId}")]
         public IActionResult DeleteAccount(int userId) // Requires User ID, Valid Token
@@ -153,8 +158,9 @@ namespace PresentationAPI.Controllers.User
             return BadRequest(response);
         }
 
-
+        // /api/user?userId={userId}&email={email@gmail.com} [Either of the one is required] 
         [Authorize]
+        [HttpGet]
         public IActionResult GetUser([FromQuery] int? userId, [FromQuery] string? email) // Requires User ID or Email and a  Valid Token
         { // User must be logged in, and can only accesss their own account
             if (userId == null && string.IsNullOrWhiteSpace(email))
@@ -166,10 +172,27 @@ namespace PresentationAPI.Controllers.User
 
             if (response.StatusCode == ResponseCode.NotFound ||
                 response.StatusCode == ResponseCode.Forbidden ||
-                response.StatusCode == ResponseCode.Unauthorized || 
+                response.StatusCode == ResponseCode.Unauthorized ||
                 response.StatusCode == ResponseCode.InternalServerError)
                 return BadRequest(response);
             return Ok(response);
+        }
+
+        // /api/user/save-user-details/{userId}
+        [Authorize]
+        [HttpPost("Save-User-Details/{userID}")]
+        public IActionResult SaveUserDetails(int userID, UserDetailsVM userDetails) // Requires User ID and User Details
+        { // User must be logged in, and can only update their own account details
+            if (userID <= 0 || userDetails == null)
+            {
+                return BadRequest("User ID and User Details are required to save user details.");
+            }
+            ResponseVM response = _userDetailsService.SaveUserDetails(userID, userDetails);
+            if (response.StatusCode == ResponseCode.Success)
+            {
+                return Ok(response);
+            }
+            return BadRequest(response);
         }
     }
 }

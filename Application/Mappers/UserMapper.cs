@@ -28,7 +28,11 @@ namespace Application.Mapppers
                 Age = user.Age,
                 Gender = user.Gender,
                 Level = user.Level,
-                Interests = user.Interests,
+                Interests = user.Interests.Select(i => new UserInterest
+                {
+                    InterestID = i.InterestID,
+                    InterestName = i.InterestName
+                }).ToList()
             };
         }
     }

@@ -8,6 +8,7 @@ using CommonOperations.Encryption;
 using CommonOperations.Methods;
 using Infrastructure.Context;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace Infrastructure.Services.User
@@ -98,6 +99,7 @@ namespace Infrastructure.Services.User
                 try
                 {
                     var existingUser = _clientDBContext.Users        // Check User Password by Encrypting and Checking with the one is database
+                        .Include(u => u.Interests)
                         .FirstOrDefault(u => u.Email == user.Email && Encryption.EncryptPassword(user.Password) == u.Password);
                     if (existingUser == null)
                     {
@@ -204,6 +206,8 @@ namespace Infrastructure.Services.User
                 }
 
                 var userEntity = _clientDBContext.Users
+                    .AsNoTracking()
+                    .Include(u => u.Interests)
                     .Where(u => (userId.HasValue && u.UserID == userId) ||
                                 (!string.IsNullOrWhiteSpace(email) && u.Email == email))
                     .FirstOrDefault();
@@ -214,7 +218,6 @@ namespace Infrastructure.Services.User
                     response.ErrorMessage = "User not found.";
                     return response;
                 }
-
                 UserDTO userDto = userEntity.ToUserDTO();
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "User fetched successfully.";
