@@ -5,9 +5,9 @@
         public int StatusCode { get; set; }
         public string? ResponseMessage { get; set; } = "";
         public string? ErrorMessage { get; set; } = "";
-        public dynamic Data { get; set; } = null;
+        public dynamic? Data { get; set; } = null;
 
-        private static ResponseVM instance = null;
+        private static ResponseVM? instance = null;
 
         private ResponseVM()
         {

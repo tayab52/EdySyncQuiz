@@ -5,36 +5,35 @@ using System.Text.Json;
 
 namespace PresentationAPI.Middlewares
 {
-    public class ErrorHandlingMiddleware
+    public class ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandlingMiddleware> logger)
     {
-        private readonly RequestDelegate _next;
-        private readonly ILogger<ErrorHandlingMiddleware> _logger;
-
-        public ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandlingMiddleware> logger)
-        {
-            _next = next;
-            _logger = logger;
-        }
-
         public async Task Invoke(HttpContext context)
         {
             try
             {
-                await _next(context);
+                await next(context);
             }
             catch (Exception ex)
             {
-                await HandleExceptionAsync(context, ex);
+                await HandleExceptionAsync(context, ex, GetOptions());
             }
         }
 
-        private async Task HandleExceptionAsync(HttpContext context, Exception ex)
+        private static JsonSerializerOptions GetOptions()
+        {
+            return new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+        }
+
+        private async Task HandleExceptionAsync(HttpContext context, Exception ex, JsonSerializerOptions options)
         {
             ResponseVM response = ResponseVM.Instance;
             var statusCode = (int)HttpStatusCode.InternalServerError;
             var errorMessage = "An unexpected error occurred.";
 
-            _logger.LogError(ex, "Exception occurred while processing request {Method} {Path}", context.Request.Method, context.Request.Path);
+            logger.LogError(ex, "Exception occurred while processing request {Method} {Path}", context.Request.Method, context.Request.Path);
 
             switch (ex)
             {
@@ -61,7 +60,7 @@ namespace PresentationAPI.Middlewares
 
             if (context.Response.HasStarted)
             {
-                _logger.LogWarning("The response has already started, the error handling middleware will not modify the response.");
+                logger.LogWarning("The response has already started, the error handling middleware will not modify the response.");
                 return;
             }
 
@@ -70,12 +69,6 @@ namespace PresentationAPI.Middlewares
 
             context.Response.StatusCode = statusCode;
             context.Response.ContentType = "application/json";
-
-            var options = new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            };
-
             await context.Response.WriteAsync(JsonSerializer.Serialize(response, options));
         }
     }

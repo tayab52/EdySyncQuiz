@@ -14,35 +14,26 @@ using System.Text;
 
 namespace Infrastructure.Services.Auth
 {
-    public class AuthService : IAuthService
+    public class AuthService(ClientDBContext clientDBContext, IConfiguration config) : IAuthService
     {
-        private readonly ClientDBContext _clientDBContext;
-        private IConfiguration _config;
-
-        public AuthService(ClientDBContext clientDBContext, IConfiguration config)
-        {
-            this._clientDBContext = clientDBContext;
-            this._config = config;
-        }
-
         public string GenerateJWT(Domain.Models.Entities.Users.User user)
         {
-            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["JWT:Secret"]!));
-            var encryptionKey = new SymmetricSecurityKey(Convert.FromBase64String(_config["JWT:EncryptionKey"]!));
-            var encryptionKeyBytes = Convert.FromBase64String(_config["JWT:EncryptionKey"]!);
+            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["JWT:Secret"]!));
+            var encryptionKey = new SymmetricSecurityKey(Convert.FromBase64String(config["JWT:EncryptionKey"]!));
+            _ = Convert.FromBase64String(config["JWT:EncryptionKey"]!);
 
             var claims = new List<Claim>
             {
-                new Claim("sub", user.UserID.ToString()),
-                new Claim(ClaimTypes.Email, user.Email),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+                new("sub", user.UserID.ToString()),
+                new(ClaimTypes.Email, user.Email),
+                new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                Issuer = _config["JWT:ValidIssuer"],
-                Audience = _config["JWT:ValidAudience"],
+                Issuer = config["JWT:ValidIssuer"],
+                Audience = config["JWT:ValidAudience"],
                 SigningCredentials = new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256),
 
                 EncryptingCredentials = new EncryptingCredentials(
@@ -61,7 +52,7 @@ namespace Infrastructure.Services.Auth
         {
             ResponseVM response = ResponseVM.Instance;
             var normalizedEmail = email.Trim().ToLowerInvariant();
-            var user = _clientDBContext.Users.FirstOrDefault(u => u.Email.ToLower() == normalizedEmail);
+            var user = clientDBContext.Users.FirstOrDefault(u => u.Email.Equals(normalizedEmail, StringComparison.CurrentCultureIgnoreCase));
 
             if (user == null)
             {
@@ -94,7 +85,7 @@ namespace Infrastructure.Services.Auth
 
             try
             {
-                _clientDBContext.SaveChanges();
+                clientDBContext.SaveChanges();
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = operation == "forgot-password"
                                                     ? "OTP to reset account sent successfully"
@@ -135,7 +126,7 @@ namespace Infrastructure.Services.Auth
         public ResponseVM VerifyOTP(string email, long otp)
         {
             ResponseVM response = ResponseVM.Instance;
-            var user = _clientDBContext.Users.FirstOrDefault(u => u.Email == email);
+            var user = clientDBContext.Users.FirstOrDefault(u => u.Email == email);
             if (user == null)
             {
                 response.StatusCode = ResponseCode.NotFound;
@@ -145,7 +136,9 @@ namespace Infrastructure.Services.Auth
             if (user.OTP == otp && user.OTPExpiry > DateTime.UtcNow)
             {
                 user.IsActive = true;
-                _clientDBContext.SaveChanges();
+                user.OTPExpiry = DateTime.MinValue;
+                user.OTP = 0L; 
+                clientDBContext.SaveChanges();
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "OTP verified successfully.";
             }
@@ -159,10 +152,10 @@ namespace Infrastructure.Services.Auth
 
         public ResponseVM SendEmail(string toEmail, string subject, string body)
         {
-            string smtpServer = _config["SmtpSettings:Server"]!;
-            int smtpPort = Convert.ToInt32(_config["SmtpSettings:Port"])!;
-            string smtpUsername = _config["SmtpSettings:Username"]!;
-            string smtpPassword = _config["SmtpSettings:Password"]!;
+            string smtpServer = config["SmtpSettings:Server"]!;
+            int smtpPort = Convert.ToInt32(config["SmtpSettings:Port"])!;
+            string smtpUsername = config["SmtpSettings:Username"]!;
+            string smtpPassword = config["SmtpSettings:Password"]!;
 
             ResponseVM response = ResponseVM.Instance;
 
@@ -198,7 +191,7 @@ namespace Infrastructure.Services.Auth
         public ResponseVM ResetPassword(string email, long OTP, string newPassword)
         {
             ResponseVM response = ResponseVM.Instance;
-            var user = _clientDBContext.Users.FirstOrDefault(u => u.Email == email);
+            var user = clientDBContext.Users.FirstOrDefault(u => u.Email == email);
             if (user == null)
             {
                 response.StatusCode = ResponseCode.NotFound;
@@ -215,7 +208,7 @@ namespace Infrastructure.Services.Auth
             user.OTP = 0;
             try
             {
-                _clientDBContext.SaveChanges();
+                clientDBContext.SaveChanges();
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "Password reset successfully.";
             }

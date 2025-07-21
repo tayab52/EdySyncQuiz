@@ -1,19 +1,13 @@
 ﻿using Application.DataTransferModels.ResponseModel;
 using Application.DataTransferModels.UserViewModels;
 using Application.Interfaces.User;
-using Application.Mapppers;
+using Application.Mappers;
 using Infrastructure.Context;
 
 namespace Infrastructure.Services.User
 {
-    public class UserDetailsService : IUserDetailsService
+    public class UserDetailsService(ClientDBContext clientDBContext) : IUserDetailsService
     {
-        private readonly ClientDBContext _clientDBContext;
-
-        public UserDetailsService(ClientDBContext clientDBContext)
-        {
-            this._clientDBContext = clientDBContext;
-        }
         public ResponseVM GetUserDetails(int userId)
         {
             throw new NotImplementedException();
@@ -22,7 +16,7 @@ namespace Infrastructure.Services.User
         public ResponseVM SaveUserDetails(int userID, UserDetailsVM userDetails)
         {
             ResponseVM response = ResponseVM.Instance;
-            var user = _clientDBContext.Users.FirstOrDefault(u => u.UserID == userID);
+            var user = clientDBContext.Users.FirstOrDefault(u => u.UserID == userID);
             if(user ==  null)
             {
                 response.StatusCode = 404;
@@ -35,12 +29,12 @@ namespace Infrastructure.Services.User
                 user.Gender = userDetails.Gender;
                 user.Language = userDetails.Language;
                 user.Level = userDetails.Level;
-                user.Interests = userDetails.Interests.Select(i => new Domain.Models.Entities.Users.UserInterest
+                user.Interests = [.. userDetails.Interests.Select(i => new Domain.Models.Entities.Users.UserInterest
                 {
                     InterestName = i
-                }).ToList();
-                _clientDBContext.Users.Update(user);
-                _clientDBContext.SaveChanges();
+                })];
+                clientDBContext.Users.Update(user);
+                clientDBContext.SaveChanges();
                 response.StatusCode = 200;
                 response.ResponseMessage = "User Details Updated Successfully";
                 response.Data = user.ToUserDTO();

@@ -2,7 +2,7 @@
 using Application.DataTransferModels.UserViewModels;
 using Application.Interfaces.Auth;
 using Application.Interfaces.User;
-using Application.Mapppers;
+using Application.Mappers;
 using CommonOperations.Constants;
 using CommonOperations.Encryption;
 using CommonOperations.Methods;
@@ -13,19 +13,8 @@ using System.Security.Claims;
 
 namespace Infrastructure.Services.User
 {
-    public class UserService : IUserService
+    public class UserService(IHttpContextAccessor httpContextAccessor, IAuthService authService, ClientDBContext clientDBContext) : IUserService
     {
-        private readonly IAuthService _authService;
-        private readonly ClientDBContext _clientDBContext;
-        private readonly IHttpContextAccessor _httpContextAccessor;
-
-        public UserService(IHttpContextAccessor httpContextAccessor, IAuthService authService, ClientDBContext clientDBContext)
-        {
-            _httpContextAccessor = httpContextAccessor;
-            _authService = authService;
-            _clientDBContext = clientDBContext;
-        }
-
         public ResponseVM SignUp(RegisterUserVM user)
         {
             ResponseVM response = ResponseVM.Instance;
@@ -34,12 +23,11 @@ namespace Infrastructure.Services.User
                 && !string.IsNullOrWhiteSpace(user.Email)
                 && !string.IsNullOrWhiteSpace(user.Password))
             {
-                var existingUser = _clientDBContext.Users.FirstOrDefault(u => u.Email == user.Email);
+                var existingUser = clientDBContext.Users.FirstOrDefault(u => u.Email == user.Email);
                 if (existingUser != null)
                 {
                     response.StatusCode = ResponseCode.Conflict;
                     response.ErrorMessage = "Error Signing Up! Email already in use.";
-					response.ResponseMessage = "";
                     return response;
                 }
 
@@ -47,17 +35,15 @@ namespace Infrastructure.Services.User
                 {
                     response.StatusCode = ResponseCode.BadRequest;
                     response.ErrorMessage = "Invalid Email Format";
-					response.ResponseMessage = "";
 					return response;
                 }
 
-                response = _authService.SendOTP(user.Email);
+                response = authService.SendOTP(user.Email);
 
                 if (response.StatusCode != ResponseCode.Success)
                 {
                     response.StatusCode = ResponseCode.BadRequest;
                     response.ErrorMessage = "Failed to send OTP. Please try again.";
-                    response.ResponseMessage = "";
 					return response;
                 }
 
@@ -67,25 +53,22 @@ namespace Infrastructure.Services.User
                     userToSave.OTP = response.Data;
                     userToSave.OTPExpiry = DateTime.UtcNow.AddMinutes(60);
                     userToSave.Password = Encryption.EncryptPassword(user.Password);
-                    var result = _clientDBContext.Users.Add(userToSave);
-                    _clientDBContext.SaveChanges();
+                    var result = clientDBContext.Users.Add(userToSave);
+                    clientDBContext.SaveChanges();
                     response.StatusCode = ResponseCode.Success;
                     response.ResponseMessage = "User Created Successfully";
                     response.Data = result.Entity.UserID;
-                    response.ErrorMessage = "";
                 }
                 catch (Exception ex)
                 {
                     response.StatusCode = ResponseCode.BadRequest;
                     response.ErrorMessage = "Failed to Create User: " + ex.Message;
-					response.ResponseMessage = "";
 				}
             }
             else
             {
                 response.StatusCode = ResponseCode.BadRequest;
                 response.ErrorMessage = "Error Signing Up! Username, Email and Password are required!";
-				response.ResponseMessage = "";
 			}
             return response;
         }
@@ -98,7 +81,7 @@ namespace Infrastructure.Services.User
             {
                 try
                 {
-                    var existingUser = _clientDBContext.Users        // Check User Password by Encrypting and Checking with the one is database
+                    var existingUser = clientDBContext.Users        // Check User Password by Encrypting and Checking with the one is database
                         .Include(u => u.Interests)
                         .FirstOrDefault(u => u.Email == user.Email && Encryption.EncryptPassword(user.Password) == u.Password);
                     if (existingUser == null)
@@ -125,7 +108,7 @@ namespace Infrastructure.Services.User
                     {
                         response.StatusCode = ResponseCode.Success;
                         response.ResponseMessage = "Login Successful";
-                        string token = _authService.GenerateJWT(existingUser);
+                        string token = authService.GenerateJWT(existingUser);
                         UserDTO userDTO = existingUser.ToUserDTO();
                         response.Data = new
                         {
@@ -159,7 +142,7 @@ namespace Infrastructure.Services.User
 
             try
             {
-                var user = _httpContextAccessor.HttpContext?.User;
+                var user = httpContextAccessor.HttpContext?.User;
 
                 if (user == null)
                 {
@@ -205,7 +188,7 @@ namespace Infrastructure.Services.User
                     return response;
                 }
 
-                var userEntity = _clientDBContext.Users
+                var userEntity = clientDBContext.Users
                     .AsNoTracking()
                     .Include(u => u.Interests)
                     .Where(u => (userId.HasValue && u.UserID == userId) ||
@@ -235,7 +218,7 @@ namespace Infrastructure.Services.User
         public ResponseVM ChangePassword(ChangePasswordVM user)
         {
             ResponseVM response = ResponseVM.Instance;
-            var existingUser = _clientDBContext.Users.FirstOrDefault(u => u.Email == user.Email);
+            var existingUser = clientDBContext.Users.FirstOrDefault(u => u.Email == user.Email);
             if (existingUser == null)
             {
                 response.StatusCode = ResponseCode.NotFound;
@@ -251,8 +234,8 @@ namespace Infrastructure.Services.User
                     return response;
                 }
                 existingUser.Password = Encryption.EncryptPassword(user.NewPassword);
-                _clientDBContext.Users.Update(existingUser);
-                _clientDBContext.SaveChanges();
+                clientDBContext.Users.Update(existingUser);
+                clientDBContext.SaveChanges();
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "Password updated successfully.";
             }
@@ -275,7 +258,7 @@ namespace Infrastructure.Services.User
             }
             try
             {
-                var user = _httpContextAccessor.HttpContext?.User;
+                var user = httpContextAccessor.HttpContext?.User;
                 var tokenUserId = user?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
                 if (tokenUserId == null)
@@ -292,7 +275,7 @@ namespace Infrastructure.Services.User
                     return response;
                 }
 
-                var userEntity = _clientDBContext.Users
+                var userEntity = clientDBContext.Users
                     .Where(u => u.UserID == userId)
                     .FirstOrDefault();
 
@@ -303,7 +286,7 @@ namespace Infrastructure.Services.User
                     return response;
                 }
 
-                var existingUser = _clientDBContext.Users.Find(userId);
+                var existingUser = clientDBContext.Users.Find(userId);
                 if (existingUser == null)
                 {
                     response.StatusCode = ResponseCode.NotFound;
@@ -311,8 +294,8 @@ namespace Infrastructure.Services.User
                     return response;
                 }
                 existingUser.IsDeleted = true;
-                _clientDBContext.Users.Update(existingUser);
-                _clientDBContext.SaveChanges();
+                clientDBContext.Users.Update(existingUser);
+                clientDBContext.SaveChanges();
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "User deleted successfully.";
             }

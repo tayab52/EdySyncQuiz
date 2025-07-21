@@ -2,7 +2,6 @@
 using Application.DataTransferModels.UserViewModels;
 using Application.Interfaces.Auth;
 using Application.Interfaces.User;
-using Azure;
 using CommonOperations.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -11,19 +10,8 @@ namespace PresentationAPI.Controllers.User
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class UserController : Controller
+    public class UserController(IUserService userService, IAuthService authService, IUserDetailsService userDetailsService) : Controller
     {
-        private readonly IUserService _userService;
-        private readonly IAuthService _authService;
-        private readonly IUserDetailsService _userDetailsService;
-
-        public UserController(IUserService userService, IAuthService authService, IUserDetailsService userDetailsService)
-        {
-            _userService = userService;
-            _authService = authService;
-            _userDetailsService = userDetailsService;
-        }
-
         // /api/user/signup
         [HttpPost("SignUp")]
         public IActionResult SignUp(RegisterUserVM user) // Requires Username, Email, Password
@@ -32,7 +20,7 @@ namespace PresentationAPI.Controllers.User
             {
                 return BadRequest("User data is required.");
             }
-            ResponseVM response = _userService.SignUp(user);
+            ResponseVM response = userService.SignUp(user);
             if (response.StatusCode == ResponseCode.Success)
             {
                 return Ok(response);
@@ -48,7 +36,7 @@ namespace PresentationAPI.Controllers.User
             {
                 return BadRequest("User data is required.");
             }
-            ResponseVM response = _userService.SignIn(user);
+            ResponseVM response = userService.SignIn(user);
             if (response.StatusCode == ResponseCode.Success)
             {
                 return Ok(response);
@@ -64,7 +52,7 @@ namespace PresentationAPI.Controllers.User
             {
                 return BadRequest("Email is required.");
             }
-            ResponseVM response = _authService.VerifyOTP(email, otp);
+            ResponseVM response = authService.VerifyOTP(email, otp);
 
             if (response.StatusCode == ResponseCode.Success)
             {
@@ -82,7 +70,7 @@ namespace PresentationAPI.Controllers.User
             {
                 return BadRequest("Email is required to resend OTP.");
             }
-            ResponseVM response = _authService.ResendOTP(email);
+            ResponseVM response = authService.ResendOTP(email);
             if (response.StatusCode == ResponseCode.Success)
             {
                 return Ok(response);
@@ -99,7 +87,7 @@ namespace PresentationAPI.Controllers.User
                 return BadRequest("New Password is required to reset the password.");
             }
 
-            ResponseVM response = _authService.ResendOTP(email, "forgot-password");
+            ResponseVM response = authService.ResendOTP(email, "forgot-password");
             if (response.StatusCode == ResponseCode.Success)
             {
                 return Ok(response);
@@ -115,7 +103,7 @@ namespace PresentationAPI.Controllers.User
             {
                 return BadRequest("Email, OTP, and New Password are required to reset the password.");
             }
-            ResponseVM response = _authService.ResetPassword(user.Email, user.OTP, user.Password);
+            ResponseVM response = authService.ResetPassword(user.Email, user.OTP, user.Password);
             if (response.StatusCode == ResponseCode.Success)
             {
                 return Ok(response);
@@ -133,7 +121,7 @@ namespace PresentationAPI.Controllers.User
             {
                 return BadRequest("Email, Old Password and New Password are required to change the password.");
             }
-            ResponseVM response = _userService.ChangePassword(user);
+            ResponseVM response = userService.ChangePassword(user);
             if (response.StatusCode == ResponseCode.Success)
             {
                 return Ok(response);
@@ -150,7 +138,7 @@ namespace PresentationAPI.Controllers.User
             {
                 return BadRequest("User ID is required to delete the account.");
             }
-            ResponseVM response = _userService.DeleteUser(userId);
+            ResponseVM response = userService.DeleteUser(userId);
             if (response.StatusCode == ResponseCode.Success)
             {
                 return Ok(response);
@@ -166,9 +154,9 @@ namespace PresentationAPI.Controllers.User
             if (userId == null && string.IsNullOrWhiteSpace(email))
                 return BadRequest("User ID or Email is required.");
 
-            ResponseVM response = ResponseVM.Instance;
+            ResponseVM response;
 
-            response = _userService.GetUser(userId, email);
+            response = userService.GetUser(userId, email);
 
             if (response.StatusCode == ResponseCode.NotFound ||
                 response.StatusCode == ResponseCode.Forbidden ||
@@ -187,7 +175,7 @@ namespace PresentationAPI.Controllers.User
             {
                 return BadRequest("User ID and User Details are required to save user details.");
             }
-            ResponseVM response = _userDetailsService.SaveUserDetails(userID, userDetails);
+            ResponseVM response = userDetailsService.SaveUserDetails(userID, userDetails);
             if (response.StatusCode == ResponseCode.Success)
             {
                 return Ok(response);

@@ -19,16 +19,12 @@ namespace CommonOperations.Encryption
 
         private static String ConvertStringToSHA256(string value)
         {
-            StringBuilder sb = new StringBuilder();
+            StringBuilder sb = new();
+            Encoding enc = Encoding.UTF8;
+            byte[] result = SHA256.HashData(enc.GetBytes(value));
 
-            using (var hash = SHA256.Create())
-            {
-                Encoding enc = Encoding.UTF8;
-                byte[] result = hash.ComputeHash(enc.GetBytes(value));
-
-                foreach (byte b in result)
-                    sb.Append(b.ToString("x2"));
-            }
+            foreach (byte b in result)
+                sb.Append(b.ToString("x2"));
 
             return sb.ToString();
         }

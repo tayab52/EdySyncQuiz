@@ -78,7 +78,7 @@ namespace PresentationAPI
             app.UseAuthorization();
 
             app.MapControllers();
-            Console.WriteLine(builder.Configuration.ToString());
+
             app.Run();
         }
     }

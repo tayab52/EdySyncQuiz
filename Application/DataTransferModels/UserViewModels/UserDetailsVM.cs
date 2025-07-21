@@ -6,6 +6,6 @@
         public string Gender { get; set; } = string.Empty;
         public int Age { get; set; }
         public int Level { get; set; } = 0;
-        public List<string> Interests { get; set; } = new List<string>();
+        public List<string> Interests { get; set; } = [];
     }
 }
