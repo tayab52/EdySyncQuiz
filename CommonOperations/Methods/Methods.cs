@@ -26,6 +26,5 @@
             string basePath = AppDomain.CurrentDomain.BaseDirectory;
             return basePath;
         }
-
     }
 }

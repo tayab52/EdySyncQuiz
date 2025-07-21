@@ -32,6 +32,5 @@ namespace CommonOperations.Encryption
 
             return sb.ToString();
         }
-
     }
 }

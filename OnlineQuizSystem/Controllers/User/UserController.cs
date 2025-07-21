@@ -2,6 +2,7 @@
 using Application.DataTransferModels.UserViewModels;
 using Application.Interfaces.Auth;
 using Application.Interfaces.User;
+using Azure;
 using CommonOperations.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,9 +22,10 @@ namespace PresentationAPI.Controllers.User
             _authService = authService;
         }
 
+        // /api/user/signup
         [HttpPost("SignUp")]
         public IActionResult SignUp(RegisterUserVM user) // Requires Username, Email, Password
-        {
+        { // user can sign up with username, email, and password
             if (user == null)
             {
                 return BadRequest("User data is required.");
@@ -36,9 +38,10 @@ namespace PresentationAPI.Controllers.User
             return BadRequest(response);
         }
 
+        // api/user/signin
         [HttpPost("SignIn")]
         public IActionResult SignIn(LoginUserVM user) // Requires Email, Password
-        {
+        { // user can sign in with email and password
             if (user == null)
             {
                 return BadRequest("User data is required.");
@@ -51,29 +54,33 @@ namespace PresentationAPI.Controllers.User
             return BadRequest(response);
         }
 
+        // api/user/verify-otp?email={email}&otp={otp}
         [HttpPost("Verify-OTP")]
-        public IActionResult VerifyOTP(UserDTO userDTO) // Requires Email and OTP
-        {
-            if (userDTO?.OTP == null && !string.IsNullOrEmpty(userDTO?.Email))
+        public IActionResult VerifyOTP([FromQuery] string email, [FromQuery] long otp) // Requires Email and OTP
+        { // after correctly signing up, user needs to verify their email with OTP. by default, users status IsActive is false
+            if (string.IsNullOrEmpty(email))
             {
-                return BadRequest("Verification data is required.");
+                return BadRequest("Email is required.");
             }
-            ResponseVM response = _authService.VerifyOTP(userDTO.Email, userDTO.OTP.Value);
+            ResponseVM response = _authService.VerifyOTP(email, otp);
+
             if (response.StatusCode == ResponseCode.Success)
             {
                 return Ok(response);
             }
+
             return BadRequest(response);
         }
 
+        // api/user/resend-otp?email={email}
         [HttpPost("Resend-OTP")]
-        public IActionResult ResendOTP(UserDTO userDTO) // Requires Email
-        {
-            if (string.IsNullOrEmpty(userDTO.Email))
+        public IActionResult ResendOTP([FromQuery] string email) // Requires Email
+        { // user can resend OTP to their email for any reason, such as forgetting the OTP or not receiving it
+            if (string.IsNullOrEmpty(email))
             {
                 return BadRequest("Email is required to resend OTP.");
             }
-            ResponseVM response = _authService.ResendOTP(userDTO.Email);
+            ResponseVM response = _authService.ResendOTP(email);
             if (response.StatusCode == ResponseCode.Success)
             {
                 return Ok(response);
@@ -81,15 +88,16 @@ namespace PresentationAPI.Controllers.User
             return BadRequest(response);
         }
 
+        // api/user/forgot-password?email={email}
         [HttpPost("Forgot-Password")]
-        public IActionResult ForgotPassword(UserDTO userDTO) // Requires Email to send OTP for password reset
-        {
-            if (userDTO == null || string.IsNullOrEmpty(userDTO.Email))
+        public IActionResult ForgotPassword([FromQuery] string email) // Requires Email to send OTP for password reset
+        { // user can reset their password by providing their email, which will send an OTP to that email
+            if (string.IsNullOrEmpty(email))
             {
                 return BadRequest("New Password is required to reset the password.");
             }
 
-            ResponseVM response = _authService.ResendOTP(userDTO.Email, "forgot-password");
+            ResponseVM response = _authService.ResendOTP(email, "forgot-password");
             if (response.StatusCode == ResponseCode.Success)
             {
                 return Ok(response);
@@ -97,14 +105,15 @@ namespace PresentationAPI.Controllers.User
             return BadRequest(response);
         }
 
+        // /api/user/reset-password
         [HttpPost("Reset-Password")]
-        public IActionResult ResetPassword(UserDTO userDTO) // Requires Email, OTP, and New Password
-        {
-            if (userDTO == null || string.IsNullOrEmpty(userDTO.Email) || userDTO.OTP == null || string.IsNullOrEmpty(userDTO.Password))
+        public IActionResult ResetPassword(ResetPasswordVM user) // Requires Email, Password and OTP
+        { // After forgot-password, reset-password api will be called. Which will reset the user's password
+            if (user == null || string.IsNullOrEmpty(user.Email) || string.IsNullOrEmpty(user.Password))
             {
                 return BadRequest("Email, OTP, and New Password are required to reset the password.");
             }
-            ResponseVM response = _authService.ResetPassword(userDTO.Email, userDTO.OTP.Value, userDTO.Password);
+            ResponseVM response = _authService.ResetPassword(user.Email, user.OTP, user.Password);
             if (response.StatusCode == ResponseCode.Success)
             {
                 return Ok(response);
@@ -113,13 +122,14 @@ namespace PresentationAPI.Controllers.User
         }
 
         [HttpPost("Change-Password")]
-        public IActionResult ChangePassword(ChangePasswordVM changePasswordVM) // Requires User ID, Old Password and New Password
-        {
-            if (changePasswordVM == null || string.IsNullOrEmpty(changePasswordVM.OldPassword) || string.IsNullOrEmpty(changePasswordVM.NewPassword))
-            {
-                return BadRequest("Old Password and New Password are required to change the password.");
+        public IActionResult ChangePassword(ChangePasswordVM user) // Requires Email, Old Password and New Password
+        { 
+            if (user == null || string.IsNullOrEmpty(user.OldPassword) 
+                || string.IsNullOrEmpty(user.NewPassword) || string.IsNullOrEmpty(user.Email))
+            { 
+                return BadRequest("Email, Old Password and New Password are required to change the password.");
             }
-            ResponseVM response = _userService.ChangePassword(changePasswordVM);
+            ResponseVM response = _userService.ChangePassword(user);
             if (response.StatusCode == ResponseCode.Success)
             {
                 return Ok(response);
@@ -127,9 +137,10 @@ namespace PresentationAPI.Controllers.User
             return BadRequest(response);
         }
 
+        [Authorize]
         [HttpPost("Delete-Account/{UserId}")]
-        public IActionResult DeleteAccount(int userId) // Requires User ID
-        {
+        public IActionResult DeleteAccount(int userId) // Requires User ID, Valid Token
+        { // User must be logged in, and can only delete his own account
             if (userId <= 0)
             {
                 return BadRequest("User ID is required to delete the account.");
@@ -144,18 +155,21 @@ namespace PresentationAPI.Controllers.User
 
 
         [Authorize]
-        [HttpGet("{userId}")]
-        public IActionResult GetUserById(int userId) // Requires User ID, Valid Token
-        {
-            if (userId <= 0)
-            {
-                return BadRequest("User ID is required to retrieve user information.");
-            }
-            var result = _userService.GetUserById(userId);
-            if (result.StatusCode == ResponseCode.Forbidden || result.StatusCode == ResponseCode.Unauthorized
-                || result.StatusCode == ResponseCode.InternalServerError || result.StatusCode == ResponseCode.NotFound)
-                return BadRequest(result);
-            return Ok(result);
+        public IActionResult GetUser([FromQuery] int? userId, [FromQuery] string? email) // Requires User ID or Email and a  Valid Token
+        { // User must be logged in, and can only accesss their own account
+            if (userId == null && string.IsNullOrWhiteSpace(email))
+                return BadRequest("User ID or Email is required.");
+
+            ResponseVM response = ResponseVM.Instance;
+
+            response = _userService.GetUser(userId, email);
+
+            if (response.StatusCode == ResponseCode.NotFound ||
+                response.StatusCode == ResponseCode.Forbidden ||
+                response.StatusCode == ResponseCode.Unauthorized || 
+                response.StatusCode == ResponseCode.InternalServerError)
+                return BadRequest(response);
+            return Ok(response);
         }
     }
 }

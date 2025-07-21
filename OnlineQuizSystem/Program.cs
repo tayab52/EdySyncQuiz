@@ -19,8 +19,8 @@ namespace PresentationAPI
 
             builder.Services.AddControllers();
 
-            var encryptionKey = new SymmetricSecurityKey(Convert.FromBase64String(builder.Configuration["JWT:EncryptionKey"]));
-            var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"]));
+            var encryptionKey = new SymmetricSecurityKey(Convert.FromBase64String(builder.Configuration["JWT:EncryptionKey"]!));
+            var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"]!));
 
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(options =>
@@ -45,7 +45,7 @@ namespace PresentationAPI
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
-            var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>();
+            var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>()!;
 
             builder.Services.AddCors(options =>
             {
@@ -62,12 +62,11 @@ namespace PresentationAPI
 
             app.UseCors("AllowFrontend");
 
-            if (app.Environment.IsDevelopment())
+            if (app.Environment.IsDevelopment()||app.Environment.IsProduction())
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
-
 
             app.UseRouting();
 

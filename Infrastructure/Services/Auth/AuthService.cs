@@ -27,15 +27,14 @@ namespace Infrastructure.Services.Auth
 
         public string GenerateJWT(Domain.Models.Entities.Users.User user)
         {
-            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["JWT:Secret"]));
-            var encryptionKey = new SymmetricSecurityKey(Convert.FromBase64String(_config["JWT:EncryptionKey"]));
-            var encryptionKeyBytes = Convert.FromBase64String(_config["JWT:EncryptionKey"]);
+            var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["JWT:Secret"]!));
+            var encryptionKey = new SymmetricSecurityKey(Convert.FromBase64String(_config["JWT:EncryptionKey"]!));
+            var encryptionKeyBytes = Convert.FromBase64String(_config["JWT:EncryptionKey"]!);
 
             var claims = new List<Claim>
             {
                 new Claim("sub", user.UserID.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
-                new Claim(ClaimTypes.Role, user.Role),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
@@ -115,7 +114,7 @@ namespace Infrastructure.Services.Auth
             ResponseVM response = ResponseVM.Instance;
             long OTP = Methods.GenerateOTP();
             string template = $"Your OTP to register account is: {OTP}";
-            string emailSubject = subject;
+            string emailSubject = subject!;
             string emailBody = template;
 
             try
@@ -160,10 +159,10 @@ namespace Infrastructure.Services.Auth
 
         public ResponseVM SendEmail(string toEmail, string subject, string body)
         {
-            string smtpServer = _config["SmtpSettings:Server"];
-            int smtpPort = Convert.ToInt32(_config["SmtpSettings:Port"]);
-            string smtpUsername = _config["SmtpSettings:Username"];
-            string smtpPassword = _config["SmtpSettings:Password"];
+            string smtpServer = _config["SmtpSettings:Server"]!;
+            int smtpPort = Convert.ToInt32(_config["SmtpSettings:Port"])!;
+            string smtpUsername = _config["SmtpSettings:Username"]!;
+            string smtpPassword = _config["SmtpSettings:Password"]!;
 
             ResponseVM response = ResponseVM.Instance;
 

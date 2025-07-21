@@ -39,7 +39,6 @@ namespace Infrastructure.Services.User
                     response.StatusCode = ResponseCode.Conflict;
                     response.ErrorMessage = "Error Signing Up! Email already in use.";
 					response.ResponseMessage = "";
-					response.Data = null;
                     return response;
                 }
 
@@ -48,7 +47,6 @@ namespace Infrastructure.Services.User
                     response.StatusCode = ResponseCode.BadRequest;
                     response.ErrorMessage = "Invalid Email Format";
 					response.ResponseMessage = "";
-					response.Data = null;
 					return response;
                 }
 
@@ -59,7 +57,6 @@ namespace Infrastructure.Services.User
                     response.StatusCode = ResponseCode.BadRequest;
                     response.ErrorMessage = "Failed to send OTP. Please try again.";
                     response.ResponseMessage = "";
-                    response.Data = null;
 					return response;
                 }
 
@@ -81,7 +78,6 @@ namespace Infrastructure.Services.User
                     response.StatusCode = ResponseCode.BadRequest;
                     response.ErrorMessage = "Failed to Create User: " + ex.Message;
 					response.ResponseMessage = "";
-					response.Data = null;
 				}
             }
             else
@@ -89,7 +85,6 @@ namespace Infrastructure.Services.User
                 response.StatusCode = ResponseCode.BadRequest;
                 response.ErrorMessage = "Error Signing Up! Username, Email and Password are required!";
 				response.ResponseMessage = "";
-				response.Data = null;
 			}
             return response;
         }
@@ -129,7 +124,12 @@ namespace Infrastructure.Services.User
                         response.StatusCode = ResponseCode.Success;
                         response.ResponseMessage = "Login Successful";
                         string token = _authService.GenerateJWT(existingUser);
-                        response.Data = token;
+                        UserDTO userDTO = existingUser.ToUserDTO();
+                        response.Data = new
+                        {
+                            Token = token,
+                            User = userDTO
+                        };
                     }
                     else
                     {
@@ -151,9 +151,125 @@ namespace Infrastructure.Services.User
             return response;
         }
 
-        public ResponseVM GetUserById(int userId)
+        public ResponseVM GetUser(int? userId, string? email)
         {
             ResponseVM response = ResponseVM.Instance;
+
+            try
+            {
+                var user = _httpContextAccessor.HttpContext?.User;
+
+                if (user == null)
+                {
+                    response.StatusCode = ResponseCode.BadRequest;
+                    response.ErrorMessage = "User context not found.";
+                    return response;
+                }
+
+                string? tokenUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                string? tokenEmail = user.FindFirst(ClaimTypes.Email)?.Value;
+
+                if (userId.HasValue && !string.IsNullOrWhiteSpace(email)) // if both are provided, both must match the token
+                {
+                    if (tokenUserId != userId.ToString() || !string.Equals(tokenEmail, email, StringComparison.OrdinalIgnoreCase))
+                    {
+                        response.StatusCode = ResponseCode.Unauthorized;
+                        response.ErrorMessage = "You are not allowed to access this user's data.";
+                        return response;
+                    }
+                }
+                else if (userId.HasValue) // if only userId is provided
+                {
+                    if (tokenUserId != userId.ToString())
+                    {
+                        response.StatusCode = ResponseCode.Unauthorized;
+                        response.ErrorMessage = "You are not allowed to access this user's data by ID.";
+                        return response;
+                    }
+                }
+                else if (!string.IsNullOrWhiteSpace(email)) // if only email is provided
+                {
+                    if (!string.Equals(tokenEmail, email, StringComparison.OrdinalIgnoreCase))
+                    {
+                        response.StatusCode = ResponseCode.Unauthorized;
+                        response.ErrorMessage = "You are not allowed to access this user's data by email.";
+                        return response;
+                    }
+                }
+                else
+                {
+                    response.StatusCode = ResponseCode.BadRequest;
+                    response.ErrorMessage = "User ID or Email is required.";
+                    return response;
+                }
+
+                var userEntity = _clientDBContext.Users
+                    .Where(u => (userId.HasValue && u.UserID == userId) ||
+                                (!string.IsNullOrWhiteSpace(email) && u.Email == email))
+                    .FirstOrDefault();
+
+                if (userEntity == null)
+                {
+                    response.StatusCode = ResponseCode.NotFound;
+                    response.ErrorMessage = "User not found.";
+                    return response;
+                }
+
+                UserDTO userDto = userEntity.ToUserDTO();
+                response.StatusCode = ResponseCode.Success;
+                response.ResponseMessage = "User fetched successfully.";
+                response.Data = userDto;
+            }
+            catch
+            {
+                response.StatusCode = ResponseCode.InternalServerError;
+                response.ErrorMessage = "An error occurred while retrieving the user.";
+            }
+
+            return response;
+        }
+
+        public ResponseVM ChangePassword(ChangePasswordVM user)
+        {
+            ResponseVM response = ResponseVM.Instance;
+            var existingUser = _clientDBContext.Users.FirstOrDefault(u => u.Email == user.Email);
+            if (existingUser == null)
+            {
+                response.StatusCode = ResponseCode.NotFound;
+                response.ErrorMessage = "User not found.";
+                return response;
+            }
+            try
+            {
+                if (Encryption.EncryptPassword(user.OldPassword) != existingUser.Password)
+                {
+                    response.StatusCode = ResponseCode.Unauthorized;
+                    response.ErrorMessage = "Old Password is incorrect.";
+                    return response;
+                }
+                existingUser.Password = Encryption.EncryptPassword(user.NewPassword);
+                _clientDBContext.Users.Update(existingUser);
+                _clientDBContext.SaveChanges();
+                response.StatusCode = ResponseCode.Success;
+                response.ResponseMessage = "Password updated successfully.";
+            }
+            catch
+            {
+                response.StatusCode = ResponseCode.InternalServerError;
+                response.ErrorMessage = "Failed to update user: ";
+            }
+            return response;
+        }
+
+        public ResponseVM DeleteUser(int userId)
+        {
+            ResponseVM response = ResponseVM.Instance;
+            if (userId <= 0)
+            {
+                response.StatusCode = ResponseCode.BadRequest;
+                response.ErrorMessage = "Invalid User ID";
+                return response;
+            }
             try
             {
                 var user = _httpContextAccessor.HttpContext?.User;
@@ -184,81 +300,6 @@ namespace Infrastructure.Services.User
                     return response;
                 }
 
-                var userDto = new UserDTO
-                {
-                    UserID = userEntity.UserID,
-                    Username = userEntity.Username,
-                    Email = userEntity.Email,
-                    Role = userEntity.Role,
-                };
-
-                response.StatusCode = ResponseCode.Success;
-                response.ResponseMessage = "User fetched successfully.";
-                response.Data = userDto;
-            }
-            catch
-            {
-                response.StatusCode = ResponseCode.InternalServerError;
-                response.ErrorMessage = "An error occurred while retrieving the user.";
-            }
-            return response;
-        }
-
-        public ResponseVM ChangePassword(ChangePasswordVM user)
-        {
-            ResponseVM response = ResponseVM.Instance;
-            if (user == null || user.UserID <= 0 || string.IsNullOrWhiteSpace(user.OldPassword))
-            {
-                response.StatusCode = ResponseCode.BadRequest;
-                response.ErrorMessage = "Invalid User ID or Password";
-                return response;
-            }
-            var existingUser = _clientDBContext.Users.Find(user.UserID);
-            if (existingUser == null)
-            {
-                response.StatusCode = ResponseCode.NotFound;
-                response.ErrorMessage = "User not found.";
-                return response;
-            }
-            try
-            {
-                if (Encryption.EncryptPassword(user.OldPassword) != existingUser.Password)
-                {
-                    response.StatusCode = ResponseCode.Unauthorized;
-                    response.ErrorMessage = "Old Password is incorrect.";
-                    return response;
-                }
-                if (user.NewPassword != user.ConfirmNewPassword)
-                {
-                    response.StatusCode = ResponseCode.BadRequest;
-                    response.ErrorMessage = "Passwords don't match.";
-                    return response;
-                }
-                existingUser.Password = Encryption.EncryptPassword(user.NewPassword);
-                _clientDBContext.Users.Update(existingUser);
-                _clientDBContext.SaveChanges();
-                response.StatusCode = ResponseCode.Success;
-                response.ResponseMessage = "Password updated successfully.";
-            }
-            catch (Exception ex)
-            {
-                response.StatusCode = ResponseCode.InternalServerError;
-                response.ErrorMessage = "Failed to update user: ";
-            }
-            return response;
-        }
-
-        public ResponseVM DeleteUser(int userId)
-        {
-            ResponseVM response = ResponseVM.Instance;
-            if (userId <= 0)
-            {
-                response.StatusCode = ResponseCode.BadRequest;
-                response.ErrorMessage = "Invalid User ID";
-                return response;
-            }
-            try
-            {
                 var existingUser = _clientDBContext.Users.Find(userId);
                 if (existingUser == null)
                 {

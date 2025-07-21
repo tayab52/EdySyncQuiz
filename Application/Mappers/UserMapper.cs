@@ -12,17 +12,23 @@ namespace Application.Mapppers
                 Username = vm.Username,
                 Email = vm.Email,
                 Password = vm.Password,
-                Role = vm.Role ?? "User"
             };
         }
 
-        public static User ToDomainModel(this LoginUserVM vm)
+        public static UserDTO ToUserDTO(this User user)
         {
-            return new User
+            return new UserDTO
             {
-                Email = vm.Email,
-                Password = vm.Password,
-                Role = vm.Role ?? "User"
+                UserID = user.UserID,
+                Username = user.Username,
+                Email = user.Email,
+                IsActive = user.IsActive,
+                IsDeleted = user.IsDeleted,
+                Language = user.Language,
+                Age = user.Age,
+                Gender = user.Gender,
+                Level = user.Level,
+                Interests = user.Interests,
             };
         }
     }

@@ -7,7 +7,7 @@ namespace Application.Interfaces.User
     {
         ResponseVM SignUp(RegisterUserVM user);
         ResponseVM SignIn(LoginUserVM user);
-        ResponseVM GetUserById(int userId);
+        ResponseVM GetUser(int? userId, string? email);
         ResponseVM ChangePassword(ChangePasswordVM user);
         ResponseVM DeleteUser(int userId);
     }
