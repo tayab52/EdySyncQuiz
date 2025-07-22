@@ -12,7 +12,7 @@ namespace Application.DataTransferModels.UserViewModels
         public string? Language { get; set; } = string.Empty;
         public string? Gender { get; set; } = string.Empty;
         public int? Age { get; set; }
-        public int? Level { get; set; } = 0; 
+        public int? Level { get; set; } = 0;
         public List<UserInterest> Interests { get; set; } = [];
     }
 }

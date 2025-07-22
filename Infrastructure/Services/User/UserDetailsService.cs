@@ -17,7 +17,7 @@ namespace Infrastructure.Services.User
         {
             ResponseVM response = ResponseVM.Instance;
             var user = clientDBContext.Users.FirstOrDefault(u => u.UserID == userID);
-            if(user ==  null)
+            if (user == null)
             {
                 response.StatusCode = 404;
                 response.ResponseMessage = "User not found";

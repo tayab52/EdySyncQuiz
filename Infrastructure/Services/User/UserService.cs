@@ -35,7 +35,7 @@ namespace Infrastructure.Services.User
                 {
                     response.StatusCode = ResponseCode.BadRequest;
                     response.ErrorMessage = "Invalid Email Format";
-					return response;
+                    return response;
                 }
 
                 response = authService.SendOTP(user.Email);
@@ -44,10 +44,10 @@ namespace Infrastructure.Services.User
                 {
                     response.StatusCode = ResponseCode.BadRequest;
                     response.ErrorMessage = "Failed to send OTP. Please try again.";
-					return response;
+                    return response;
                 }
 
-				try
+                try
                 {
                     Domain.Models.Entities.Users.User userToSave = user.ToDomainModel();
                     userToSave.OTP = response.Data;
@@ -63,13 +63,13 @@ namespace Infrastructure.Services.User
                 {
                     response.StatusCode = ResponseCode.BadRequest;
                     response.ErrorMessage = "Failed to Create User: " + ex.Message;
-				}
+                }
             }
             else
             {
                 response.StatusCode = ResponseCode.BadRequest;
                 response.ErrorMessage = "Error Signing Up! Username, Email and Password are required!";
-			}
+            }
             return response;
         }
 

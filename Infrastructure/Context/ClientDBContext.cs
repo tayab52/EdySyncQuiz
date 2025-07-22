@@ -27,5 +27,10 @@ namespace Infrastructure.Context
         }
 
         public DbSet<User> Users { get; set; }
+        public DbSet<UserTest> UserTests { get; set; }
+        public DbSet<UserInterest> UserInterests { get; set; }
+        public DbSet<UserAnswer> UserAnswers { get; set; }
+        public DbSet<Question> Questions { get; set; }
+        public DbSet<TestCategory> TestCategories { get; set; }
     }
 }

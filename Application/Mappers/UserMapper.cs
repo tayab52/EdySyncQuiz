@@ -31,7 +31,7 @@ namespace Application.Mappers
                 Interests = [.. user.Interests.Select(i => new UserInterest
                 {
                     InterestID = i.InterestID,
-                    InterestName = i.InterestName
+                    InterestName = i.InterestName,
                 })]
             };
         }

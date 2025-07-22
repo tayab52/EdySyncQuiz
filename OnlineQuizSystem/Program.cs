@@ -62,7 +62,7 @@ namespace PresentationAPI
 
             app.UseCors("AllowFrontend");
 
-            if (app.Environment.IsDevelopment()||app.Environment.IsProduction())
+            if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();

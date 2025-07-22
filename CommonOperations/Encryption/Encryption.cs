@@ -13,7 +13,7 @@ namespace CommonOperations.Encryption
 
         public static string Base64Encode(string password)
         {
-            var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(password);
+            var plainTextBytes = Encoding.UTF8.GetBytes(password);
             return System.Convert.ToBase64String(plainTextBytes);
         }
 

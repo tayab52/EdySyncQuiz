@@ -137,7 +137,7 @@ namespace Infrastructure.Services.Auth
             {
                 user.IsActive = true;
                 user.OTPExpiry = DateTime.MinValue;
-                user.OTP = 0L; 
+                user.OTP = 0L;
                 clientDBContext.SaveChanges();
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "OTP verified successfully.";
