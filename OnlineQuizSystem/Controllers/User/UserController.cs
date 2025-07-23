@@ -5,6 +5,7 @@ using Application.Interfaces.User;
 using CommonOperations.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
 
 namespace PresentationAPI.Controllers.User
 {
@@ -30,13 +31,13 @@ namespace PresentationAPI.Controllers.User
 
         // api/user/signin
         [HttpPost("SignIn")]
-        public IActionResult SignIn(LoginUserVM user) // Requires Email, Password
+        public async Task<IActionResult> SignIn(LoginUserVM user) // Requires Email, Password
         { // user can sign in with email and password
             if (user == null)
             {
                 return BadRequest("User data is required.");
             }
-            ResponseVM response = userService.SignIn(user);
+            var response = await userService.SignIn(user);
             if (response.StatusCode == ResponseCode.Success)
             {
                 return Ok(response);

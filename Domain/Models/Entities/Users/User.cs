@@ -40,6 +40,9 @@ namespace Domain.Models.Entities.Users
         [Column(TypeName = "datetime2")]
         public DateTime OTPExpiry { get; set; }
 
+        [Column(TypeName = "nvarchar(2001)")]
+        public string ProfileImage { get; set; } = "";
+
         public int? Age { get; set; }
 
         public string? Gender { get; set; }

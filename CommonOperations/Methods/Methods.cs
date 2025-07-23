@@ -1,7 +1,14 @@
-﻿namespace CommonOperations.Methods
+﻿using Dapper;
+using Microsoft.Data.SqlClient;
+using System.Data;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.Json;
+
+
+namespace CommonOperations.Methods
 {
     public class Methods
-    {
+    { 
         public static long GenerateOTP()
         {
             var random = new Random();
@@ -21,10 +28,35 @@
             }
         }
 
-        public static string GetProjectRootDirectory()
+        public static string GetConnectionString()
         {
-            string basePath = AppDomain.CurrentDomain.BaseDirectory;
-            return basePath;
+            var configuration = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
+                .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true)
+                .Build();
+
+            return configuration.GetConnectionString("ConnectionString")!;
+        }
+
+
+        public static async Task<IEnumerable<dynamic>> ExecuteStoredProceduresList(string storedProcedureName, DynamicParameters parameters)
+        {
+            using var connection = new SqlConnection(GetConnectionString());
+            await connection.OpenAsync();
+
+            var results = await connection.QueryAsync<dynamic>(
+                storedProcedureName,
+                parameters,
+                commandType: CommandType.StoredProcedure
+            );
+
+            return results.Any() ? results : Enumerable.Empty<dynamic>();
+        }
+
+        public string GetProjectRootDirectory()
+        {
+            return AppDomain.CurrentDomain.BaseDirectory;
         }
     }
 }

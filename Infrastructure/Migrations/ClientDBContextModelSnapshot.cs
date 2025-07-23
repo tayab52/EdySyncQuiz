@@ -22,85 +22,6 @@ namespace Infrastructure.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("Domain.Models.Entities.Users.Question", b =>
-                {
-                    b.Property<int>("QuestionId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("QuestionId");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("QuestionId"));
-
-                    b.Property<string>("CorrectAnswerOption")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("CorrectAnswerOption");
-
-                    b.Property<string>("Explanation")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("Explanation");
-
-                    b.Property<string>("OptionA")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("OptionA");
-
-                    b.Property<string>("OptionB")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("OptionB");
-
-                    b.Property<string>("OptionC")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("OptionC");
-
-                    b.Property<string>("OptionD")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("OptionD");
-
-                    b.Property<string>("QuestionText")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<int>("UserTestId")
-                        .HasColumnType("int")
-                        .HasColumnName("UserTestId");
-
-                    b.HasKey("QuestionId");
-
-                    b.HasIndex("UserTestId");
-
-                    b.ToTable("Questions");
-                });
-
-            modelBuilder.Entity("Domain.Models.Entities.Users.TestCategory", b =>
-                {
-                    b.Property<int>("CategoryId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("CategoryId");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CategoryId"));
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)")
-                        .HasColumnName("Description");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("Name");
-
-                    b.HasKey("CategoryId");
-
-                    b.ToTable("TestCategories");
-                });
-
             modelBuilder.Entity("Domain.Models.Entities.Users.User", b =>
                 {
                     b.Property<int>("UserID")
@@ -143,6 +64,10 @@ namespace Infrastructure.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
+                    b.Property<string>("ProfileImage")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(2001)");
+
                     b.Property<string>("Username")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -154,48 +79,6 @@ namespace Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Users");
-                });
-
-            modelBuilder.Entity("Domain.Models.Entities.Users.UserAnswer", b =>
-                {
-                    b.Property<int>("UserAnswerId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("UserAnswerId");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UserAnswerId"));
-
-                    b.Property<DateTime>("AnswerDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool?>("IsCorrect")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("QuestionId")
-                        .HasColumnType("int")
-                        .HasColumnName("QuestionId");
-
-                    b.Property<string>("SelectedAnswerOption")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(1)");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int")
-                        .HasColumnName("UserId");
-
-                    b.Property<int>("UserTestId")
-                        .HasColumnType("int")
-                        .HasColumnName("UserTestId");
-
-                    b.HasKey("UserAnswerId");
-
-                    b.HasIndex("QuestionId");
-
-                    b.HasIndex("UserId");
-
-                    b.HasIndex("UserTestId");
-
-                    b.ToTable("UserAnswers");
                 });
 
             modelBuilder.Entity("Domain.Models.Entities.Users.UserInterest", b =>
@@ -218,96 +101,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("UserID");
 
-                    b.ToTable("UserInterests");
-                });
-
-            modelBuilder.Entity("Domain.Models.Entities.Users.UserTest", b =>
-                {
-                    b.Property<int>("UserTestId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("UserTestId");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UserTestId"));
-
-                    b.Property<int>("CategoryId")
-                        .HasColumnType("int")
-                        .HasColumnName("CategoryId");
-
-                    b.Property<int?>("CorrectAnswers")
-                        .HasColumnType("int")
-                        .HasColumnName("CorrectAnswers");
-
-                    b.Property<string>("GeminiPromptUsed")
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("GeminiPromptUsed");
-
-                    b.Property<decimal?>("Score")
-                        .HasColumnType("decimal(5, 2)")
-                        .HasColumnName("Score");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)")
-                        .HasColumnName("Status");
-
-                    b.Property<DateTime>("TestDate")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("TestDate");
-
-                    b.Property<int?>("TotalQuestions")
-                        .HasColumnType("int")
-                        .HasColumnName("TotalQuestions");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int")
-                        .HasColumnName("UserId");
-
-                    b.HasKey("UserTestId");
-
-                    b.HasIndex("CategoryId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("UserTests");
-                });
-
-            modelBuilder.Entity("Domain.Models.Entities.Users.Question", b =>
-                {
-                    b.HasOne("Domain.Models.Entities.Users.UserTest", "UserTest")
-                        .WithMany("Questions")
-                        .HasForeignKey("UserTestId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("UserTest");
-                });
-
-            modelBuilder.Entity("Domain.Models.Entities.Users.UserAnswer", b =>
-                {
-                    b.HasOne("Domain.Models.Entities.Users.Question", "Question")
-                        .WithMany("UserAnswers")
-                        .HasForeignKey("QuestionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Domain.Models.Entities.Users.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Domain.Models.Entities.Users.UserTest", "UserTest")
-                        .WithMany("UserAnswers")
-                        .HasForeignKey("UserTestId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Question");
-
-                    b.Navigation("User");
-
-                    b.Navigation("UserTest");
+                    b.ToTable("UserInterest");
                 });
 
             modelBuilder.Entity("Domain.Models.Entities.Users.UserInterest", b =>
@@ -321,45 +115,9 @@ namespace Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Domain.Models.Entities.Users.UserTest", b =>
-                {
-                    b.HasOne("Domain.Models.Entities.Users.TestCategory", "TestCategory")
-                        .WithMany("UserTests")
-                        .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Domain.Models.Entities.Users.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("TestCategory");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Domain.Models.Entities.Users.Question", b =>
-                {
-                    b.Navigation("UserAnswers");
-                });
-
-            modelBuilder.Entity("Domain.Models.Entities.Users.TestCategory", b =>
-                {
-                    b.Navigation("UserTests");
-                });
-
             modelBuilder.Entity("Domain.Models.Entities.Users.User", b =>
                 {
                     b.Navigation("Interests");
-                });
-
-            modelBuilder.Entity("Domain.Models.Entities.Users.UserTest", b =>
-                {
-                    b.Navigation("Questions");
-
-                    b.Navigation("UserAnswers");
                 });
 #pragma warning restore 612, 618
         }

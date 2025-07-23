@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(ClientDBContext))]
-    [Migration("20250721122943_UpdateUserInterestToAvoidCircularDependency")]
-    partial class UpdateUserInterestToAvoidCircularDependency
+    [Migration("20250723110630_AddProfileField")]
+    partial class AddProfileField
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -66,6 +66,10 @@ namespace Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("ProfileImage")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(2001)");
 
                     b.Property<string>("Username")
                         .IsRequired()

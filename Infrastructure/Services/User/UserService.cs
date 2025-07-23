@@ -6,14 +6,17 @@ using Application.Mappers;
 using CommonOperations.Constants;
 using CommonOperations.Encryption;
 using CommonOperations.Methods;
+using Dapper;
 using Infrastructure.Context;
+using Infrastructure.Services.Token;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace Infrastructure.Services.User
 {
-    public class UserService(IHttpContextAccessor httpContextAccessor, IAuthService authService, ClientDBContext clientDBContext) : IUserService
+    public class UserService(IAuthService authService, ClientDBContext clientDBContext, TokenService tokenService) : IUserService
     {
         public ResponseVM SignUp(RegisterUserVM user)
         {
@@ -73,7 +76,7 @@ namespace Infrastructure.Services.User
             return response;
         }
 
-        public ResponseVM SignIn(LoginUserVM user)
+        public async Task<ResponseVM> SignIn(LoginUserVM user)
         {
             ResponseVM response = ResponseVM.Instance;
 
@@ -81,46 +84,48 @@ namespace Infrastructure.Services.User
             {
                 try
                 {
-                    var existingUser = clientDBContext.Users        // Check User Password by Encrypting and Checking with the one is database
-                        .Include(u => u.Interests)
-                        .FirstOrDefault(u => u.Email == user.Email && Encryption.EncryptPassword(user.Password) == u.Password);
-                    if (existingUser == null)
+                    var parameters = new DynamicParameters();
+                    parameters.Add("@Email", user.Email);
+                    parameters.Add("@Password", Encryption.EncryptPassword(user.Password));
+                    var users = await Methods.ExecuteStoredProceduresList("SP_GetUserDetails", parameters);
+
+                    if (users == null || !users.Any())
                     {
                         response.StatusCode = ResponseCode.Unauthorized;
                         response.ErrorMessage = "User does not exist.";
                         return response;
                     }
 
-                    if (existingUser.IsDeleted)
+                    // Extract data once
+                    dynamic firstUser = users.First();
+                    var userJson = JsonSerializer.Serialize(firstUser);
+                    var userEntity = JsonSerializer.Deserialize<Domain.Models.Entities.Users.User>(userJson)!;
+
+                    if (firstUser.IsDeleted)
                     {
                         response.StatusCode = ResponseCode.Unauthorized;
                         response.ErrorMessage = "User account is deleted.";
                         return response;
                     }
-                    if (!existingUser.IsActive)
+
+                    if (!firstUser.IsActive)
                     {
                         response.StatusCode = ResponseCode.Unauthorized;
                         response.ErrorMessage = "User account is not active. Please verify your email.";
                         return response;
                     }
 
-                    if (existingUser != null)
+                    response.StatusCode = ResponseCode.Success;
+                    response.ResponseMessage = "Login Successful";
+                    string token = authService.GenerateJWT(userEntity);
+
+                    UserDTO userDTO = UserMapper.MapToDTO(users);
+
+                    response.Data = new
                     {
-                        response.StatusCode = ResponseCode.Success;
-                        response.ResponseMessage = "Login Successful";
-                        string token = authService.GenerateJWT(existingUser);
-                        UserDTO userDTO = existingUser.ToUserDTO();
-                        response.Data = new
-                        {
-                            Token = token,
-                            User = userDTO
-                        };
-                    }
-                    else
-                    {
-                        response.StatusCode = ResponseCode.Unauthorized;
-                        response.ErrorMessage = "Invalid Email or Password";
-                    }
+                        Token = token,
+                        User = userDTO
+                    };
                 }
                 catch (Exception ex)
                 {
@@ -133,6 +138,7 @@ namespace Infrastructure.Services.User
                 response.StatusCode = ResponseCode.BadRequest;
                 response.ErrorMessage = "Error Signing In! Email and Password are required!";
             }
+
             return response;
         }
 
@@ -142,17 +148,8 @@ namespace Infrastructure.Services.User
 
             try
             {
-                var user = httpContextAccessor.HttpContext?.User;
-
-                if (user == null)
-                {
-                    response.StatusCode = ResponseCode.BadRequest;
-                    response.ErrorMessage = "User context not found.";
-                    return response;
-                }
-
-                string? tokenUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                string? tokenEmail = user.FindFirst(ClaimTypes.Email)?.Value;
+                string? tokenUserId = tokenService.UserID;
+                string? tokenEmail = tokenService.Email;
 
                 if (userId.HasValue && !string.IsNullOrWhiteSpace(email)) // if both are provided, both must match the token
                 {
@@ -258,22 +255,8 @@ namespace Infrastructure.Services.User
             }
             try
             {
-                var user = httpContextAccessor.HttpContext?.User;
-                var tokenUserId = user?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                if (tokenUserId == null)
-                {
-                    response.StatusCode = ResponseCode.BadRequest;
-                    response.ErrorMessage = "Token is missing the user ID.";
-                    return response;
-                }
-
-                if (tokenUserId != userId.ToString())
-                {
-                    response.StatusCode = ResponseCode.Unauthorized;
-                    response.ErrorMessage = "You are not allowed to access this user's data.";
-                    return response;
-                }
+                string? tokenUserId = tokenService.UserID;
+                string? tokenEmail = tokenService.Email;
 
                 var userEntity = clientDBContext.Users
                     .Where(u => u.UserID == userId)

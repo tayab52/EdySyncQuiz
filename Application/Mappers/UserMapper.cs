@@ -35,5 +35,34 @@ namespace Application.Mappers
                 })]
             };
         }
+
+        public static UserDTO MapToDTO(IEnumerable<dynamic> records)
+        {
+            var first = records.First();
+            var dto = new UserDTO
+            {
+                UserID = first.UserID,
+                Username = first.Username,
+                Email = first.Email,
+                IsActive = first.IsActive,
+                IsDeleted = first.IsDeleted,
+                Language = first.Language,
+                Gender = first.Gender,
+                Age = first.Age,
+                Level = first.Level,
+                Interests = new List<UserInterest>()
+            };
+
+            foreach (var r in records)
+            {
+                dto.Interests.Add(new UserInterest
+                {
+                    InterestID = r.InterestID,
+                    InterestName = r.InterestName
+                });
+            }
+
+            return dto;
+        }
     }
 }
