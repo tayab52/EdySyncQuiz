@@ -1,10 +1,6 @@
 ﻿using Amazon.S3;
 using Amazon.S3.Model;
-using Amazon;
 using Microsoft.Extensions.Configuration;
-using System;
-using System.IO;
-using System.Threading.Tasks;
 
 namespace Infrastructure.Services.Wasabi
 {
@@ -42,12 +38,8 @@ namespace Infrastructure.Services.Wasabi
                 base64Data = base64Data.Replace(" ", "+").Trim();
 
                 var bytes = Convert.FromBase64String(base64Data);
-                Console.WriteLine($"Decoded Bytes Length: {bytes.Length}");
                 using var stream = new MemoryStream(bytes);
                 stream.Position = 0;
-
-                Console.WriteLine($"Bucket: {_bucketName}");
-                Console.WriteLine($"Key: {key}");
 
                 var putRequest = new PutObjectRequest
                 {
@@ -60,15 +52,12 @@ namespace Infrastructure.Services.Wasabi
 
 
                 var response = await _s3Client.PutObjectAsync(putRequest);
-                Console.WriteLine($"Uploaded to Wasabi. ETag: {response.ETag}");
 
                 return key;
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Wasabi Upload Failed:");
-                Console.WriteLine(ex.Message);
-                Console.WriteLine(ex.StackTrace);
+                Console.WriteLine("Wasabi Upload Failed: " + ex.Message);
                 throw;
             }
         }

@@ -5,7 +5,6 @@ using Application.Interfaces.User;
 using CommonOperations.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
 
 namespace PresentationAPI.Controllers.User
 {
@@ -31,13 +30,13 @@ namespace PresentationAPI.Controllers.User
 
         // api/user/signin
         [HttpPost("SignIn")]
-        public async Task<IActionResult> SignIn(LoginUserVM user) // Requires Email, Password
+        public IActionResult SignIn(LoginUserVM user) // Requires Email, Password
         { // user can sign in with email and password
             if (user == null)
             {
                 return BadRequest("User data is required.");
             }
-            var response = await userService.SignIn(user);
+            var response = userService.SignIn(user);
             if (response.StatusCode == ResponseCode.Success)
             {
                 return Ok(response);
@@ -104,7 +103,7 @@ namespace PresentationAPI.Controllers.User
             {
                 return BadRequest("Email, OTP, and New Password are required to reset the password.");
             }
-            ResponseVM response = authService.ResetPassword(user.Email, user.OTP, user.Password);
+            ResponseVM response = authService.ResetPassword(user.Email, user.Password);
             if (response.StatusCode == ResponseCode.Success)
             {
                 return Ok(response);
@@ -115,12 +114,12 @@ namespace PresentationAPI.Controllers.User
         // /api/user/change-password
         [Authorize]
         [HttpPost("Change-Password")]
-        public IActionResult ChangePassword(ChangePasswordVM user) // Requires Email, Old Password and New Password
+        public IActionResult ChangePassword(ChangePasswordVM user) // Requires Old Password and New Password
         {
             if (user == null || string.IsNullOrEmpty(user.OldPassword)
-                || string.IsNullOrEmpty(user.NewPassword) || string.IsNullOrEmpty(user.Email))
+                || string.IsNullOrEmpty(user.NewPassword))
             {
-                return BadRequest("Email, Old Password and New Password are required to change the password.");
+                return BadRequest("Old Password and New Password are required to change the password.");
             }
             ResponseVM response = userService.ChangePassword(user);
             if (response.StatusCode == ResponseCode.Success)
@@ -132,14 +131,10 @@ namespace PresentationAPI.Controllers.User
 
         // /api/user/delete-account/{userID}
         [Authorize]
-        [HttpPost("Delete-Account/{UserId}")]
-        public IActionResult DeleteAccount(int userId) // Requires User ID, Valid Token
+        [HttpPost("Delete-Account")]
+        public IActionResult DeleteAccount() // Requires Valid Token
         { // User must be logged in, and can only delete his own account
-            if (userId <= 0)
-            {
-                return BadRequest("User ID is required to delete the account.");
-            }
-            ResponseVM response = userService.DeleteUser(userId);
+            ResponseVM response = userService.DeleteUser();
             if (response.StatusCode == ResponseCode.Success)
             {
                 return Ok(response);
@@ -169,14 +164,10 @@ namespace PresentationAPI.Controllers.User
 
         // /api/user/save-user-details/{userId}
         [Authorize]
-        [HttpPost("Save-User-Details/{userID}")]
-        public IActionResult SaveUserDetails(int userID, UserDetailsVM userDetails) // Requires User ID and User Details
+        [HttpPost("Save-User-Details")]
+        public IActionResult SaveUserDetails(UserDetailsVM userDetails) // Requires User ID and User Details
         { // User must be logged in, and can only update their own account details
-            if (userID <= 0 || userDetails == null)
-            {
-                return BadRequest("User ID and User Details are required to save user details.");
-            }
-            ResponseVM response = userDetailsService.SaveUserDetails(userID, userDetails);
+            ResponseVM response = userDetailsService.SaveUserDetails(userDetails);
             if (response.StatusCode == ResponseCode.Success)
             {
                 return Ok(response);

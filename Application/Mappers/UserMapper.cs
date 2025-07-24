@@ -25,15 +25,11 @@ namespace Application.Mappers
                 IsActive = user.IsActive,
                 IsDeleted = user.IsDeleted,
                 IsDataSubmitted = user.IsDataSubmitted,
-                Language = user.Language,
-                Age = user.Age,
+                Languages = user.Languages,
+                DateOfBirth = user.DateOfBirth,
                 Gender = user.Gender,
                 Level = user.Level,
-                Interests = [.. user.Interests.Select(i => new UserInterest
-                {
-                    InterestID = i.InterestID,
-                    InterestName = i.InterestName,
-                })]
+                Interests = user.Interests
             };
         }
 
@@ -48,26 +44,33 @@ namespace Application.Mappers
                 IsActive = first.IsActive,
                 IsDeleted = first.IsDeleted,
                 IsDataSubmitted = first.IsDataSubmitted,
-                Language = first.Language,
+                Languages = first.Languages,
                 Gender = first.Gender,
-                Age = first.Age,
+                DateOfBirth = first.DateOfBirth,
                 Level = first.Level,
-                Interests = new List<UserInterest>()
+                Interests = first.Interests
             };
-
-
-            foreach (var r in records)
-            {
-                if(r.InterestID == null || r.InterestName == null)
-                    continue;
-                dto.Interests.Add(new UserInterest
-                {
-                    InterestID = r.InterestID,
-                    InterestName = r.InterestName
-                });
-            }
-
             return dto;
         }
+
+        public static object FlattenUserWithToken(UserDTO dto, string token)
+        {
+            return new
+            {
+                Token = token,
+                dto.UserID,
+                dto.Username,
+                dto.Email,
+                dto.IsActive,
+                dto.IsDeleted,
+                dto.IsDataSubmitted,
+                dto.Languages,
+                dto.Gender,
+                dto.DateOfBirth,
+                dto.Level,
+                dto.Interests
+            };
+        }
+
     }
 }

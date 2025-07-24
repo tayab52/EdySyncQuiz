@@ -8,6 +8,7 @@ using MailKit.Security;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using MimeKit;
+using Org.BouncyCastle.Bcpg;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -53,7 +54,7 @@ namespace Infrastructure.Services.Auth
         {
             ResponseVM response = ResponseVM.Instance;
             var normalizedEmail = email.Trim().ToLowerInvariant();
-            var user = clientDBContext.Users.FirstOrDefault(u => u.Email.Equals(normalizedEmail, StringComparison.CurrentCultureIgnoreCase));
+            var user = clientDBContext.Users.FirstOrDefault(u => u.Email.ToLower().Contains(email.ToLower()));
 
             if (user == null)
             {
@@ -136,12 +137,16 @@ namespace Infrastructure.Services.Auth
             }
             if (user.OTP == otp && user.OTPExpiry > DateTime.UtcNow)
             {
-                user.IsActive = true;
+                if(!user.IsActive) user.IsActive = true;
                 user.OTPExpiry = DateTime.MinValue;
                 user.OTP = 0L;
                 clientDBContext.SaveChanges();
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "OTP verified successfully.";
+                response.Data = new
+                {
+                    UserId = user.UserID
+                };
             }
             else
             {
@@ -189,7 +194,7 @@ namespace Infrastructure.Services.Auth
             return response;
         }
 
-        public ResponseVM ResetPassword(string email, long OTP, string newPassword)
+        public ResponseVM ResetPassword(string email, string newPassword)
         {
             ResponseVM response = ResponseVM.Instance;
             var user = clientDBContext.Users.FirstOrDefault(u => u.Email == email);
@@ -199,14 +204,7 @@ namespace Infrastructure.Services.Auth
                 response.ErrorMessage = "User not found.";
                 return response;
             }
-            if (user.OTP != OTP || user.OTPExpiry < DateTime.UtcNow)
-            {
-                response.StatusCode = ResponseCode.BadRequest;
-                response.ErrorMessage = "Invalid or expired OTP.";
-                return response;
-            }
             user.Password = Encryption.EncryptPassword(newPassword);
-            user.OTP = 0;
             try
             {
                 clientDBContext.SaveChanges();

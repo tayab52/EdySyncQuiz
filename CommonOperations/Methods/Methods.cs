@@ -1,21 +1,13 @@
 ﻿using Dapper;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Configuration.Json;
 using System.Data;
 using System.Text.RegularExpressions;
-using SixLabors.ImageSharp.Formats;
-using SixLabors.ImageSharp.Formats.Gif;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp;
-using Amazon.S3;
-using Amazon.S3.Transfer;
 
 namespace CommonOperations.Methods
 {
     public class Methods
-    { 
+    {
         public static long GenerateOTP()
         {
             var random = new Random();

@@ -5,7 +5,6 @@ namespace Application.Interfaces.User
 {
     public interface IUserDetailsService
     {
-        ResponseVM SaveUserDetails(int userId, UserDetailsVM userDetails);
-        ResponseVM GetUserDetails(int userId);
+        ResponseVM SaveUserDetails(UserDetailsVM userDetails);
     }
 }

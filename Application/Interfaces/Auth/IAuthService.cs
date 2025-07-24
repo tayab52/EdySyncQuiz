@@ -9,6 +9,6 @@ namespace Application.Interfaces.Auth
         ResponseVM VerifyOTP(string email, long otp);
         string GenerateJWT(Domain.Models.Entities.Users.User user);
         ResponseVM SendEmail(string to, string subject, string body);
-        ResponseVM ResetPassword(string email, long OTP, string newPassword);
+        ResponseVM ResetPassword(string email, string newPassword);
     }
 }

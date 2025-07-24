@@ -9,13 +9,12 @@ using CommonOperations.Constants;
 using CommonOperations.Encryption;
 using CommonOperations.Methods;
 using Dapper;
+using Domain.Models.Entities.Users;
 using Infrastructure.Context;
 using Infrastructure.Services.Token;
 using Infrastructure.Services.Wasabi;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using System.Security.Claims;
 using System.Text.Json;
 
 namespace Infrastructure.Services.User
@@ -64,7 +63,10 @@ namespace Infrastructure.Services.User
                     clientDBContext.SaveChanges();
                     response.StatusCode = ResponseCode.Success;
                     response.ResponseMessage = "User Created Successfully";
-                    response.Data = result.Entity.UserID;
+                    response.Data = new
+                    {
+                        UserID = result.Entity.UserID
+                    };
                 }
                 catch (Exception ex)
                 {
@@ -80,7 +82,7 @@ namespace Infrastructure.Services.User
             return response;
         }
 
-        public async Task<ResponseVM> SignIn(LoginUserVM user)
+        public ResponseVM SignIn(LoginUserVM user)
         {
             ResponseVM response = ResponseVM.Instance;
 
@@ -91,42 +93,45 @@ namespace Infrastructure.Services.User
                     var parameters = new DynamicParameters();
                     parameters.Add("@Email", user.Email);
                     parameters.Add("@Password", Encryption.EncryptPassword(user.Password));
-                    var users = await Methods.ExecuteStoredProceduresList("SP_GetUserDetails", parameters);
+                    var users = Methods.ExecuteStoredProceduresList("SP_GetUserDetails", parameters);
 
-                    if (users == null || !users.Any())
+                    if (users == null || !users.Result.Any())
                     {
                         response.StatusCode = ResponseCode.Unauthorized;
-                        response.ErrorMessage = "User does not exist.";
+                        response.ErrorMessage = "Invalid Credentials.";
                         return response;
                     }
-                    dynamic firstUser = users.First();
+                    dynamic firstUser = users.Result.First();
                     var userJson = JsonSerializer.Serialize(firstUser);
                     var userEntity = JsonSerializer.Deserialize<Domain.Models.Entities.Users.User>(userJson)!;
 
                     if (firstUser.IsDeleted)
                     {
-                        response.StatusCode = ResponseCode.Unauthorized;
+                        response.StatusCode = ResponseCode.Success;
                         response.ErrorMessage = "User account is deleted.";
+                        response.Data = new
+                        {
+                            isDeleted = userEntity.IsDeleted
+                        };
                         return response;
                     }
 
                     if (!firstUser.IsActive)
                     {
-                        response.StatusCode = ResponseCode.Unauthorized;
+                        response.StatusCode = ResponseCode.Success;
                         response.ErrorMessage = "User account is not active. Please verify your email.";
+                        response.Data = new
+                        {
+                            isActive = userEntity.IsActive
+                        };
                         return response;
                     }
 
                     response.StatusCode = ResponseCode.Success;
                     response.ResponseMessage = "Login Successful";
                     string token = authService.GenerateJWT(userEntity);
-                    UserDTO userDTO = UserMapper.MapToDTO(users);
-
-                    response.Data = new
-                    {
-                        Token = token,
-                        User = userDTO
-                    };
+                    UserDTO userDTO = UserMapper.MapToDTO(users.Result);
+                    response.Data = UserMapper.FlattenUserWithToken(userDTO, token);
                 }
                 catch (Exception ex)
                 {
@@ -186,23 +191,28 @@ namespace Infrastructure.Services.User
                     return response;
                 }
 
-                var userEntity = clientDBContext.Users
-                    .AsNoTracking()
-                    .Include(u => u.Interests)
-                    .Where(u => (userId.HasValue && u.UserID == userId) ||
-                                (!string.IsNullOrWhiteSpace(email) && u.Email == email))
-                    .FirstOrDefault();
+                var parameters = new DynamicParameters();
+                parameters.Add("@Email", tokenEmail);
+                parameters.Add("@UserID", tokenUserId);
 
-                if (userEntity == null)
+                var users = Methods.ExecuteStoredProceduresList("SP_GetUser", parameters);
+
+                if (users == null || !users.Result.Any())
                 {
-                    response.StatusCode = ResponseCode.NotFound;
-                    response.ErrorMessage = "User not found.";
+                    response.StatusCode = ResponseCode.Unauthorized;
+                    response.ErrorMessage = "User does not exist.";
                     return response;
                 }
-                UserDTO userDto = userEntity.ToUserDTO();
+
+                dynamic firstUser = users.Result.First();
+                var userJson = JsonSerializer.Serialize(firstUser);
+                var userEntity = JsonSerializer.Deserialize<Domain.Models.Entities.Users.User>(userJson)!;
+
+                UserDTO userDTO = UserMapper.MapToDTO(users.Result);
+
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "User fetched successfully.";
-                response.Data = userDto;
+                response.Data = userDTO;
             }
             catch
             {
@@ -216,7 +226,14 @@ namespace Infrastructure.Services.User
         public ResponseVM ChangePassword(ChangePasswordVM user)
         {
             ResponseVM response = ResponseVM.Instance;
-            var existingUser = clientDBContext.Users.FirstOrDefault(u => u.Email == user.Email);
+            string email = tokenService?.Email;
+            if(email == null)
+            {
+                response.StatusCode = ResponseCode.Unauthorized;
+                response.ErrorMessage = "Invalid Token";
+            }
+
+            var existingUser = clientDBContext.Users.FirstOrDefault(u => u.Email == email);
             if (existingUser == null)
             {
                 response.StatusCode = ResponseCode.NotFound;
@@ -236,6 +253,10 @@ namespace Infrastructure.Services.User
                 clientDBContext.SaveChanges();
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "Password updated successfully.";
+                response.Data = new
+                {
+                    UserID = existingUser.UserID
+                };
             }
             catch
             {
@@ -245,32 +266,21 @@ namespace Infrastructure.Services.User
             return response;
         }
 
-        public ResponseVM DeleteUser(int userId)
+        public ResponseVM DeleteUser()
         {
             ResponseVM response = ResponseVM.Instance;
-            if (userId <= 0)
-            {
-                response.StatusCode = ResponseCode.BadRequest;
-                response.ErrorMessage = "Invalid User ID";
-                return response;
-            }
             try
             {
-                string? tokenUserId = tokenService.UserID;
-                string? tokenEmail = tokenService.Email;
+                string tokenUserId = tokenService.UserID;
 
-                var userEntity = clientDBContext.Users
-                    .Where(u => u.UserID == userId)
-                    .FirstOrDefault();
-
-                if (userEntity == null)
+                if (string.IsNullOrEmpty(tokenUserId))
                 {
-                    response.StatusCode = ResponseCode.NotFound;
-                    response.ErrorMessage = "User not found.";
+                    response.StatusCode = ResponseCode.Unauthorized;
+                    response.ErrorMessage = "Invalid Token";
                     return response;
                 }
 
-                var existingUser = clientDBContext.Users.Find(userId);
+                var existingUser = clientDBContext.Users.Find(tokenUserId);
                 if (existingUser == null)
                 {
                     response.StatusCode = ResponseCode.NotFound;
@@ -357,30 +367,43 @@ namespace Infrastructure.Services.User
         {
             ResponseVM response = ResponseVM.Instance;
             string userId = tokenService.UserID.ToString();
+
             var user = clientDBContext.Users
-                .FirstOrDefault(s => s.UserID.ToString() == userId.ToString() 
-                                && s.IsDeleted == false);
+                .FirstOrDefault(s => s.UserID.ToString() == userId && s.IsDeleted == false);
+
             if (user == null)
             {
                 response.StatusCode = ResponseCode.NotFound;
                 response.ErrorMessage = "User not found.";
                 return response;
             }
-            if (string.IsNullOrWhiteSpace(user.ProfileImage) || string.IsNullOrWhiteSpace(user.ImageKey))
+
+            if (string.IsNullOrWhiteSpace(user.ImageKey))
             {
                 response.StatusCode = ResponseCode.NotFound;
                 response.ErrorMessage = "User profile image not found.";
                 return response;
             }
-            string signedUrl = s3Client.GetPreSignedURL(new GetPreSignedUrlRequest
+
+            if (user.ExpiresAt <= DateTime.UtcNow.AddMinutes(1)) // check if url has expired or about to expire
             {
-                BucketName = config["WasabiSettings:BucketName"],
-                Key = user.ImageKey,
-                Expires = DateTime.UtcNow.AddSeconds(int.Parse(config["WasabiSettings:URLExpirySeconds"]!))
-            });
+                string newSignedUrl = s3Client.GetPreSignedURL(new GetPreSignedUrlRequest
+                {
+                    BucketName = config["WasabiSettings:BucketName"],
+                    Key = user.ImageKey,
+                    Expires = DateTime.UtcNow.AddSeconds(int.Parse(config["WasabiSettings:URLExpirySeconds"]!))
+                });
+
+                user.ProfileImage = newSignedUrl;
+                user.ExpiresAt = DateTime.UtcNow.AddSeconds(int.Parse(config["WasabiSettings:URLExpirySeconds"]!));
+
+                clientDBContext.Users.Update(user);
+                clientDBContext.SaveChanges();
+            }
+
             response.StatusCode = ResponseCode.Success;
             response.ResponseMessage = "User profile image retrieved successfully.";
-            response.Data = new { ProfileImageUrl = signedUrl };
+            response.Data = new { ProfileImageUrl = user.ProfileImage };
             return response;
         }
     }

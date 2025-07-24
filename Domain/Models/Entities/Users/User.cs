@@ -49,14 +49,16 @@ namespace Domain.Models.Entities.Users
         public string ImageKey { get; set; } = "";
         public DateTime ExpiresAt { get; set; }
 
-        public int? Age { get; set; }
+        [Column("Interests", TypeName = "nvarchar(MAX)")]
+        public string? Interests { get; set; } = string.Empty;
+
+        public DateTime? DateOfBirth { get; set; }
 
         public string? Gender { get; set; }
 
-        public string? Language { get; set; }
+        public string? Languages { get; set; }
 
         public int? Level { get; set; } = 0; // Entry Level (Defined in CommonOperations)
 
-        public List<UserInterest> Interests { get; set; } = [];
     }
 }

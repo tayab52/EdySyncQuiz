@@ -3,20 +3,23 @@ using Application.DataTransferModels.UserViewModels;
 using Application.Interfaces.User;
 using Application.Mappers;
 using Infrastructure.Context;
+using Infrastructure.Services.Token;
 
 namespace Infrastructure.Services.User
 {
-    public class UserDetailsService(ClientDBContext clientDBContext) : IUserDetailsService
+    public class UserDetailsService(ClientDBContext clientDBContext, TokenService tokenService) : IUserDetailsService
     {
-        public ResponseVM GetUserDetails(int userId)
-        {
-            throw new NotImplementedException();
-        }
-
-        public ResponseVM SaveUserDetails(int userID, UserDetailsVM userDetails)
+        public ResponseVM SaveUserDetails(UserDetailsVM userDetails)
         {
             ResponseVM response = ResponseVM.Instance;
-            var user = clientDBContext.Users.FirstOrDefault(u => u.UserID == userID);
+            string userID = tokenService?.UserID ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(userID))
+            {
+                response.StatusCode = 401;
+                response.ResponseMessage = "Unauthorized: User ID is required";
+                return response;
+            }
+            var user = clientDBContext.Users.FirstOrDefault(u => u.UserID.ToString() == userID);
             if (user == null)
             {
                 response.StatusCode = 404;
@@ -25,14 +28,11 @@ namespace Infrastructure.Services.User
             }
             try
             {
-                user.Age = userDetails.Age;
+                user.DateOfBirth = userDetails.DateOfBirth;
                 user.Gender = userDetails.Gender;
-                user.Language = userDetails.Language;
+                user.Languages = userDetails.Languages;
                 user.Level = userDetails.Level;
-                user.Interests = [.. userDetails.Interests.Select(i => new Domain.Models.Entities.Users.UserInterest
-                {
-                    InterestName = i
-                })];
+                user.Interests = userDetails.Interests;
                 user.IsDataSubmitted = true;
                 clientDBContext.Users.Update(user);
                 clientDBContext.SaveChanges();
