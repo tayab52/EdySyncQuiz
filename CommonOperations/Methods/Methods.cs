@@ -1,9 +1,16 @@
 ﻿using Dapper;
 using Microsoft.Data.SqlClient;
-using System.Data;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Json;
-
+using System.Data;
+using System.Text.RegularExpressions;
+using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.Formats.Gif;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp;
+using Amazon.S3;
+using Amazon.S3.Transfer;
 
 namespace CommonOperations.Methods
 {
@@ -39,7 +46,6 @@ namespace CommonOperations.Methods
             return configuration.GetConnectionString("ConnectionString")!;
         }
 
-
         public static async Task<IEnumerable<dynamic>> ExecuteStoredProceduresList(string storedProcedureName, DynamicParameters parameters)
         {
             using var connection = new SqlConnection(GetConnectionString());
@@ -54,9 +60,65 @@ namespace CommonOperations.Methods
             return results.Any() ? results : Enumerable.Empty<dynamic>();
         }
 
-        public string GetProjectRootDirectory()
+        public static string GetProjectRootDirectory()
         {
             return AppDomain.CurrentDomain.BaseDirectory;
+        }
+
+        public static string GetImageExtension(string base64String)
+        {
+            string? mimeType = null;
+
+            var match = Regex.Match(base64String, @"data:(?<mime>[^;]+);base64,");
+            if (match.Success)
+            {
+                mimeType = match.Groups["mime"].Value;
+                base64String = base64String.Substring(match.Value.Length);
+            }
+
+            byte[] bytes;
+            try
+            {
+                bytes = Convert.FromBase64String(base64String);
+            }
+            catch
+            {
+                return "invalid_base64";
+            }
+
+            if (!string.IsNullOrEmpty(mimeType))
+            {
+                return MimeTypeToExtension(mimeType);
+            }
+
+            return GetImageExtensionFromBytes(bytes);
+        }
+
+        private static string MimeTypeToExtension(string mime)
+        {
+            return mime.ToLower() switch
+            {
+                "image/jpeg" => "jpg",
+                "image/png" => "png",
+                "image/gif" => "gif",
+                "image/bmp" => "bmp",
+                "image/webp" => "webp",
+                _ => "unknown"
+            };
+        }
+
+        private static string GetImageExtensionFromBytes(byte[] bytes)
+        {
+            if (bytes.Length < 4) return "unknown";
+
+            if (bytes[0] == 0xFF && bytes[1] == 0xD8) return "jpg";
+            if (bytes[0] == 0x89 && bytes[1] == 0x50) return "png";
+            if (bytes[0] == 0x47 && bytes[1] == 0x49) return "gif";
+            if (bytes[0] == 0x42 && bytes[1] == 0x4D) return "bmp";
+            if (bytes[0] == 0x52 && bytes[1] == 0x49 &&
+                bytes[2] == 0x46 && bytes[3] == 0x46) return "webp";
+
+            return "unknown";
         }
     }
 }

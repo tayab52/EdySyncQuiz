@@ -1,4 +1,6 @@
-﻿using Application.DataTransferModels.ResponseModel;
+﻿using Amazon.S3;
+using Amazon.S3.Model;
+using Application.DataTransferModels.ResponseModel;
 using Application.DataTransferModels.UserViewModels;
 using Application.Interfaces.Auth;
 using Application.Interfaces.User;
@@ -9,14 +11,16 @@ using CommonOperations.Methods;
 using Dapper;
 using Infrastructure.Context;
 using Infrastructure.Services.Token;
+using Infrastructure.Services.Wasabi;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using System.Security.Claims;
 using System.Text.Json;
 
 namespace Infrastructure.Services.User
 {
-    public class UserService(IAuthService authService, ClientDBContext clientDBContext, TokenService tokenService) : IUserService
+    public class UserService(IAuthService authService, ClientDBContext clientDBContext, TokenService tokenService, IConfiguration config, IAmazonS3 s3Client, WasabiService wasabiService) : IUserService
     {
         public ResponseVM SignUp(RegisterUserVM user)
         {
@@ -95,8 +99,6 @@ namespace Infrastructure.Services.User
                         response.ErrorMessage = "User does not exist.";
                         return response;
                     }
-
-                    // Extract data once
                     dynamic firstUser = users.First();
                     var userJson = JsonSerializer.Serialize(firstUser);
                     var userEntity = JsonSerializer.Deserialize<Domain.Models.Entities.Users.User>(userJson)!;
@@ -118,7 +120,6 @@ namespace Infrastructure.Services.User
                     response.StatusCode = ResponseCode.Success;
                     response.ResponseMessage = "Login Successful";
                     string token = authService.GenerateJWT(userEntity);
-
                     UserDTO userDTO = UserMapper.MapToDTO(users);
 
                     response.Data = new
@@ -287,6 +288,99 @@ namespace Infrastructure.Services.User
                 response.StatusCode = ResponseCode.InternalServerError;
                 response.ErrorMessage = "Failed to delete user: " + ex.Message;
             }
+            return response;
+        }
+
+        public async Task<ResponseVM> SaveUserProfileImage(string base64Image)
+        {
+            ResponseVM response = ResponseVM.Instance;
+
+            if (string.IsNullOrWhiteSpace(base64Image))
+            {
+                response.StatusCode = ResponseCode.BadRequest;
+                response.ErrorMessage = "Invalid image data.";
+                return response;
+            }
+
+            string fileExtension = Methods.GetImageExtension(base64Image);
+            if (fileExtension == "unknown")
+            {
+                response.StatusCode = ResponseCode.BadRequest;
+                response.ErrorMessage = "Unsupported image format.";
+                return response;
+            }
+
+            string userId = tokenService.UserID.ToString();
+            string filename = $"users/{userId}/profilepic_{DateTime.UtcNow:yyyyMMdd_HHmmss}.{fileExtension}";
+
+            try
+            {
+                await wasabiService.UploadBase64ImageAsync(base64Image, filename);
+            }
+            catch
+            {
+                response.StatusCode = ResponseCode.InternalServerError;
+                response.ErrorMessage = "Failed to upload image to Wasabi.";
+                return response;
+            }
+
+            string signedUrl = s3Client.GetPreSignedURL(new GetPreSignedUrlRequest
+            {
+                BucketName = config["WasabiSettings:BucketName"],
+                Key = filename,
+                Expires = DateTime.UtcNow.AddSeconds(int.Parse(config["WasabiSettings:URLExpirySeconds"]!))
+            });
+
+            var user = clientDBContext.Users
+                .FirstOrDefault(s => s.UserID.ToString() == tokenService.UserID && s.IsDeleted == false);
+
+            if (user == null)
+            {
+                response.StatusCode = ResponseCode.NotFound;
+                response.ErrorMessage = "User not found.";
+                return response;
+            }
+
+            user.ProfileImage = signedUrl;
+            user.ImageKey = filename;
+            user.ExpiresAt = DateTime.UtcNow.AddSeconds(int.Parse(config["WasabiSettings:URLExpirySeconds"]!));
+
+            clientDBContext.Users.Update(user);
+            await clientDBContext.SaveChangesAsync();
+
+            response.StatusCode = ResponseCode.Success;
+            response.ResponseMessage = "User profile image saved to Wasabi.";
+            return response;
+        }
+
+        public ResponseVM GetUserProfileImage()
+        {
+            ResponseVM response = ResponseVM.Instance;
+            string userId = tokenService.UserID.ToString();
+            var user = clientDBContext.Users
+                .FirstOrDefault(s => s.UserID.ToString() == userId.ToString() 
+                                && s.IsDeleted == false);
+            if (user == null)
+            {
+                response.StatusCode = ResponseCode.NotFound;
+                response.ErrorMessage = "User not found.";
+                return response;
+            }
+            if (string.IsNullOrWhiteSpace(user.ProfileImage) || string.IsNullOrWhiteSpace(user.ImageKey))
+            {
+                response.StatusCode = ResponseCode.NotFound;
+                response.ErrorMessage = "User profile image not found.";
+                return response;
+            }
+            string signedUrl = s3Client.GetPreSignedURL(new GetPreSignedUrlRequest
+            {
+                BucketName = config["WasabiSettings:BucketName"],
+                Key = user.ImageKey,
+                Expires = DateTime.UtcNow.AddSeconds(int.Parse(config["WasabiSettings:URLExpirySeconds"]!))
+            });
+            response.StatusCode = ResponseCode.Success;
+            response.ResponseMessage = "User profile image retrieved successfully.";
+            response.Data = new { ProfileImageUrl = signedUrl };
             return response;
         }
     }

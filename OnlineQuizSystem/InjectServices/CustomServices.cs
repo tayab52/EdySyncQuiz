@@ -3,6 +3,7 @@ using Application.Interfaces.User;
 using Infrastructure.Services.Auth;
 using Infrastructure.Services.Token;
 using Infrastructure.Services.User;
+using Infrastructure.Services.Wasabi;
 
 namespace PresentationAPI.InjectServices
 {
@@ -14,6 +15,7 @@ namespace PresentationAPI.InjectServices
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IUserDetailsService, UserDetailsService>();
             services.AddScoped<TokenService>();
+            services.AddScoped<WasabiService>();
         }
     }
 }

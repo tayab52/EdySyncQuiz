@@ -33,6 +33,7 @@ namespace Infrastructure.Services.User
                 {
                     InterestName = i
                 })];
+                user.IsDataSubmitted = true;
                 clientDBContext.Users.Update(user);
                 clientDBContext.SaveChanges();
                 response.StatusCode = 200;

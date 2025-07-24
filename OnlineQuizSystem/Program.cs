@@ -1,3 +1,4 @@
+using Amazon.S3;
 using Infrastructure.Context;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -34,9 +35,24 @@ namespace PresentationAPI
                         ValidIssuer = builder.Configuration["Jwt:ValidIssuer"],
                         ValidAudience = builder.Configuration["Jwt:ValidAudience"],
                         IssuerSigningKey = signingKey,
-                        TokenDecryptionKey = encryptionKey
+                        TokenDecryptionKey = encryptionKey,
                     };
                 });
+
+            builder.Services.AddSingleton<IAmazonS3>(sp =>
+            {
+                var config = sp.GetRequiredService<IConfiguration>();
+                var settings = config.GetSection("WasabiSettings");
+
+                return new AmazonS3Client(
+                    settings["AccessKey"],
+                    settings["SecretKey"],
+                    new AmazonS3Config
+                    {
+                        ServiceURL = settings["ServiceUrl"],
+                        ForcePathStyle = true
+                    });
+            });
 
             builder.Services.AddHttpContextAccessor();
 

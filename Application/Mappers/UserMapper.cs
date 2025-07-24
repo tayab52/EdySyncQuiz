@@ -24,6 +24,7 @@ namespace Application.Mappers
                 Email = user.Email,
                 IsActive = user.IsActive,
                 IsDeleted = user.IsDeleted,
+                IsDataSubmitted = user.IsDataSubmitted,
                 Language = user.Language,
                 Age = user.Age,
                 Gender = user.Gender,
@@ -46,6 +47,7 @@ namespace Application.Mappers
                 Email = first.Email,
                 IsActive = first.IsActive,
                 IsDeleted = first.IsDeleted,
+                IsDataSubmitted = first.IsDataSubmitted,
                 Language = first.Language,
                 Gender = first.Gender,
                 Age = first.Age,
@@ -53,8 +55,11 @@ namespace Application.Mappers
                 Interests = new List<UserInterest>()
             };
 
+
             foreach (var r in records)
             {
+                if(r.InterestID == null || r.InterestName == null)
+                    continue;
                 dto.Interests.Add(new UserInterest
                 {
                     InterestID = r.InterestID,

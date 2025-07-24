@@ -10,5 +10,7 @@ namespace Application.Interfaces.User
         ResponseVM GetUser(int? userId, string? email);
         ResponseVM ChangePassword(ChangePasswordVM user);
         ResponseVM DeleteUser(int userId);
+        Task<ResponseVM> SaveUserProfileImage(string base64Image);
+        ResponseVM GetUserProfileImage();
     }
 }

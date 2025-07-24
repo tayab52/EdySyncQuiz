@@ -183,5 +183,35 @@ namespace PresentationAPI.Controllers.User
             }
             return BadRequest(response);
         }
+
+        // /api/user/save-profile-image
+        [Authorize]
+        [HttpPost("Save-Profile-Image")]
+        public async Task<IActionResult> SaveProfileImage([FromBody] string base64Image) // Requires Base64 Image String
+        { // User must be logged in, and can only update their own profile image
+            if (string.IsNullOrEmpty(base64Image))
+            {
+                return BadRequest("Base64 Image String is required to save profile image.");
+            }
+            ResponseVM response = await userService.SaveUserProfileImage(base64Image);
+            if (response.StatusCode == ResponseCode.Success)
+            {
+                return Ok(response);
+            }
+            return BadRequest(response);
+        }
+
+        // /api/user/get-profile-image
+        [Authorize]
+        [HttpGet("Get-Profile-Image")]
+        public IActionResult GetProfileImage() // Requires User ID and Valid Token
+        { // User must be logged in, and can only access their own profile image
+            ResponseVM response = userService.GetUserProfileImage();
+            if (response.StatusCode == ResponseCode.Success)
+            {
+                return Ok(response);
+            }
+            return BadRequest(response);
+        }
     }
 }

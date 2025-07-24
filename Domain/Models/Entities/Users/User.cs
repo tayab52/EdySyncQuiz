@@ -32,6 +32,10 @@ namespace Domain.Models.Entities.Users
         [Column(TypeName = "bit")]
         public bool IsDeleted { get; set; } = false;
 
+
+        [Column(TypeName = "bit")]
+        public bool IsDataSubmitted { get; set; } = false;
+
         [Required]
         [Range(100000, 999999)]
         public long OTP { get; set; }
@@ -40,8 +44,10 @@ namespace Domain.Models.Entities.Users
         [Column(TypeName = "datetime2")]
         public DateTime OTPExpiry { get; set; }
 
-        [Column(TypeName = "nvarchar(2001)")]
+        [Column(TypeName = "nvarchar(2000)")]
         public string ProfileImage { get; set; } = "";
+        public string ImageKey { get; set; } = "";
+        public DateTime ExpiresAt { get; set; }
 
         public int? Age { get; set; }
 

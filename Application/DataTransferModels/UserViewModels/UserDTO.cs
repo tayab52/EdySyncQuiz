@@ -9,6 +9,7 @@ namespace Application.DataTransferModels.UserViewModels
         public string? Email { get; set; } = string.Empty;
         public bool? IsActive { get; set; }
         public bool? IsDeleted { get; set; }
+        public bool? IsDataSubmitted { get; set; }
         public string? Language { get; set; } = string.Empty;
         public string? Gender { get; set; } = string.Empty;
         public int? Age { get; set; }
