@@ -66,13 +66,13 @@ namespace PresentationAPI.Controllers.Auth
 
         // api/user/verify-otp?email={email}&otp={otp}
         [HttpPost("Verify-OTP")]
-        public IActionResult VerifyOTP([FromQuery] string email, [FromQuery] long otp) // Requires Email and OTP
+        public IActionResult VerifyOTP([FromBody] VerifyOTPVM model) // Requires Email and OTP
         { // after correctly signing up, user needs to verify their email with OTP. by default, users status IsActive is false
-            if (string.IsNullOrEmpty(email))
+            if (string.IsNullOrEmpty(model.email))
             {
                 return BadRequest("Email is required.");
             }
-            ResponseVM response = authService.VerifyOTP(email, otp);
+            ResponseVM response = authService.VerifyOTP(model.email, model.otp);
 
             if (response.StatusCode == ResponseCode.Success)
             {
@@ -82,15 +82,17 @@ namespace PresentationAPI.Controllers.Auth
             return BadRequest(response);
         }
 
-        // api/user/resend-otp?email={email}
+
+
         [HttpPost("Resend-OTP")]
-        public IActionResult ResendOTP([FromQuery] string email) // Requires Email
-        { // user can resend OTP to their email for any reason, such as forgetting the OTP or not receiving it
-            if (string.IsNullOrEmpty(email))
+        public IActionResult ResendOTP([FromBody] EmailVM model)
+        {
+            if (string.IsNullOrEmpty(model.Email))
             {
                 return BadRequest("Email is required to resend OTP.");
             }
-            ResponseVM response = authService.ResendOTP(email);
+
+            ResponseVM response = authService.ResendOTP(model.Email);
             if (response.StatusCode == ResponseCode.Success)
             {
                 return Ok(response);
@@ -100,14 +102,14 @@ namespace PresentationAPI.Controllers.Auth
 
         // api/user/forgot-password?email={email}
         [HttpPost("Forgot-Password")]
-        public IActionResult ForgotPassword([FromQuery] string email) // Requires Email to send OTP for password reset
+        public IActionResult ForgotPassword([FromBody] EmailVM model) // Requires Email to send OTP for password reset
         { // user can reset their password by providing their email, which will send an OTP to that email
-            if (string.IsNullOrEmpty(email))
+            if (string.IsNullOrEmpty(model.Email))
             {
                 return BadRequest("New Password is required to reset the password.");
             }
 
-            ResponseVM response = authService.ResendOTP(email, "forgot-password");
+            ResponseVM response = authService.ResendOTP(model.Email, "forgot-password");
             if (response.StatusCode == ResponseCode.Success)
             {
                 return Ok(response);
@@ -135,7 +137,7 @@ namespace PresentationAPI.Controllers.Auth
         [HttpPost("Refresh")]
         public IActionResult Refresh(TokenRequestVM request)
         { // Requires Refresh Token to generate new access token
-            if(request == null || string.IsNullOrEmpty(request.RefreshToken))
+            if (request == null || string.IsNullOrEmpty(request.RefreshToken))
             {
                 return BadRequest("Refresh token is required.");
             }
