@@ -5,9 +5,7 @@ namespace Application.Interfaces.User
 {
     public interface IUserService
     {
-        ResponseVM SignUp(RegisterUserVM user);
-        ResponseVM SignIn(LoginUserVM user);
-        ResponseVM GetUser(int? userId, string? email);
+        ResponseVM GetUser();
         ResponseVM ChangePassword(ChangePasswordVM user);
         ResponseVM DeleteUser();
         Task<ResponseVM> SaveUserProfileImage(string base64Image);

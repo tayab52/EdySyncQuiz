@@ -1,4 +1,5 @@
 ﻿using Application.DataTransferModels.UserViewModels;
+using Domain.Models.Entities.Token;
 using Domain.Models.Entities.Users;
 
 namespace Application.Mappers
@@ -53,11 +54,12 @@ namespace Application.Mappers
             return dto;
         }
 
-        public static object FlattenUserWithToken(UserDTO dto, string token)
+        public static object FlattenUserWithToken(UserDTO dto, string accessToken, string refreshToken)
         {
             return new
             {
-                Token = token,
+                AccessToken = accessToken,
+                RefreshToken = refreshToken,
                 dto.UserID,
                 dto.Username,
                 dto.Email,
@@ -71,6 +73,5 @@ namespace Application.Mappers
                 dto.Interests
             };
         }
-
     }
 }

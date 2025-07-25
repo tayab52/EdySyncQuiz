@@ -1,4 +1,6 @@
 using Amazon.S3;
+using Application.DataTransferModels.ResponseModel;
+using CommonOperations.Constants;
 using Infrastructure.Context;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -37,6 +39,44 @@ namespace PresentationAPI
                         ValidAudience = builder.Configuration["Jwt:ValidAudience"],
                         IssuerSigningKey = signingKey,
                         TokenDecryptionKey = encryptionKey,
+                        ClockSkew = TimeSpan.Zero // disables the default 5-minute clock skew
+                    };
+
+                    options.Events = new JwtBearerEvents
+                    {
+                        OnAuthenticationFailed = context =>
+                        {
+                            // Get the request path
+                            var path = context.HttpContext.Request.Path.Value;
+
+                            var excludedPaths = new[] {
+                                "/api/auth/SignIn",
+                                "/api/auth/SignUp",
+                                "/api/auth/Verify-OTP",
+                                "/api/auth/Resend-OTP",
+                                "/api/auth/Forgot-Password",
+                                "/api/auth/Reset-Password",
+                                "/api/auth/Refresh",
+                                "/api/language"
+                            };
+
+                            if (excludedPaths.Any(p => path!.Equals(p, StringComparison.OrdinalIgnoreCase)))
+                            {
+                                return Task.CompletedTask;
+                            }
+
+                            if (context.Exception is SecurityTokenExpiredException)
+                            {
+                                ResponseVM response = ResponseVM.Instance;
+                                response.StatusCode = ResponseCode.Unauthorized;
+                                response.ErrorMessage = "Your session has expired. Please login again.";
+                                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                                context.Response.ContentType = "application/json";
+                                return context.Response.WriteAsJsonAsync(response);
+                            }
+
+                            return Task.CompletedTask;
+                        }
                     };
                 });
 

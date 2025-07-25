@@ -56,9 +56,8 @@ namespace Domain.Models.Entities.Users
 
         public string? Gender { get; set; }
 
-        public string? Languages { get; set; }
+        public string? Languages { get; set; } = string.Empty;
 
         public int? Level { get; set; } = 0; // Entry Level (Defined in CommonOperations)
-
     }
 }

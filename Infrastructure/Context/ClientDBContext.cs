@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Domain.Models.Entities.Token;
 
 namespace Infrastructure.Context
 {
@@ -27,6 +28,7 @@ namespace Infrastructure.Context
         }
 
         public DbSet<User> Users { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
         //public DbSet<UserTest> UserTests { get; set; }
         //public DbSet<UserInterest> UserInterests { get; set; }
         //public DbSet<UserAnswer> UserAnswers { get; set; }

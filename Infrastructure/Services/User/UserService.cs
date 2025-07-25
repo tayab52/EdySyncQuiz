@@ -21,173 +21,19 @@ namespace Infrastructure.Services.User
 {
     public class UserService(IAuthService authService, ClientDBContext clientDBContext, TokenService tokenService, IConfiguration config, IAmazonS3 s3Client, WasabiService wasabiService) : IUserService
     {
-        public ResponseVM SignUp(RegisterUserVM user)
-        {
-            ResponseVM response = ResponseVM.Instance;
-
-            if (!string.IsNullOrWhiteSpace(user.Username)
-                && !string.IsNullOrWhiteSpace(user.Email)
-                && !string.IsNullOrWhiteSpace(user.Password))
-            {
-                var existingUser = clientDBContext.Users.FirstOrDefault(u => u.Email == user.Email);
-                if (existingUser != null)
-                {
-                    response.StatusCode = ResponseCode.Conflict;
-                    response.ErrorMessage = "Error Signing Up! Email already in use.";
-                    return response;
-                }
-
-                if (!Methods.IsValidEmailFormat(user.Email))
-                {
-                    response.StatusCode = ResponseCode.BadRequest;
-                    response.ErrorMessage = "Invalid Email Format";
-                    return response;
-                }
-
-                response = authService.SendOTP(user.Email);
-
-                if (response.StatusCode != ResponseCode.Success)
-                {
-                    response.StatusCode = ResponseCode.BadRequest;
-                    response.ErrorMessage = "Failed to send OTP. Please try again.";
-                    return response;
-                }
-
-                try
-                {
-                    Domain.Models.Entities.Users.User userToSave = user.ToDomainModel();
-                    userToSave.OTP = response.Data;
-                    userToSave.OTPExpiry = DateTime.UtcNow.AddMinutes(60);
-                    userToSave.Password = Encryption.EncryptPassword(user.Password);
-                    var result = clientDBContext.Users.Add(userToSave);
-                    clientDBContext.SaveChanges();
-                    response.StatusCode = ResponseCode.Success;
-                    response.ResponseMessage = "User Created Successfully";
-                    response.Data = new
-                    {
-                        UserID = result.Entity.UserID
-                    };
-                }
-                catch (Exception ex)
-                {
-                    response.StatusCode = ResponseCode.BadRequest;
-                    response.ErrorMessage = "Failed to Create User: " + ex.Message;
-                }
-            }
-            else
-            {
-                response.StatusCode = ResponseCode.BadRequest;
-                response.ErrorMessage = "Error Signing Up! Username, Email and Password are required!";
-            }
-            return response;
-        }
-
-        public ResponseVM SignIn(LoginUserVM user)
-        {
-            ResponseVM response = ResponseVM.Instance;
-
-            if (!string.IsNullOrWhiteSpace(user.Email) && !string.IsNullOrWhiteSpace(user.Password))
-            {
-                try
-                {
-                    var parameters = new DynamicParameters();
-                    parameters.Add("@Email", user.Email);
-                    parameters.Add("@Password", Encryption.EncryptPassword(user.Password));
-                    var users = Methods.ExecuteStoredProceduresList("SP_GetUserDetails", parameters);
-
-                    if (users == null || !users.Result.Any())
-                    {
-                        response.StatusCode = ResponseCode.Unauthorized;
-                        response.ErrorMessage = "Invalid Credentials.";
-                        return response;
-                    }
-                    dynamic firstUser = users.Result.First();
-                    var userJson = JsonSerializer.Serialize(firstUser);
-                    var userEntity = JsonSerializer.Deserialize<Domain.Models.Entities.Users.User>(userJson)!;
-
-                    if (firstUser.IsDeleted)
-                    {
-                        response.StatusCode = ResponseCode.Success;
-                        response.ErrorMessage = "User account is deleted.";
-                        response.Data = new
-                        {
-                            isDeleted = userEntity.IsDeleted
-                        };
-                        return response;
-                    }
-
-                    if (!firstUser.IsActive)
-                    {
-                        response.StatusCode = ResponseCode.Success;
-                        response.ErrorMessage = "User account is not active. Please verify your email.";
-                        response.Data = new
-                        {
-                            isActive = userEntity.IsActive
-                        };
-                        return response;
-                    }
-
-                    response.StatusCode = ResponseCode.Success;
-                    response.ResponseMessage = "Login Successful";
-                    string token = authService.GenerateJWT(userEntity);
-                    UserDTO userDTO = UserMapper.MapToDTO(users.Result);
-                    response.Data = UserMapper.FlattenUserWithToken(userDTO, token);
-                }
-                catch (Exception ex)
-                {
-                    response.StatusCode = ResponseCode.BadRequest;
-                    response.ErrorMessage = "Error Signing In!: " + ex.Message;
-                }
-            }
-            else
-            {
-                response.StatusCode = ResponseCode.BadRequest;
-                response.ErrorMessage = "Error Signing In! Email and Password are required!";
-            }
-
-            return response;
-        }
-
-        public ResponseVM GetUser(int? userId, string? email)
+        public ResponseVM GetUser()
         {
             ResponseVM response = ResponseVM.Instance;
 
             try
             {
-                string? tokenUserId = tokenService.UserID;
-                string? tokenEmail = tokenService.Email;
+                string tokenUserId = tokenService.UserID;
+                string tokenEmail = tokenService.Email;
 
-                if (userId.HasValue && !string.IsNullOrWhiteSpace(email)) // if both are provided, both must match the token
+                if(tokenEmail == null && tokenUserId == null)
                 {
-                    if (tokenUserId != userId.ToString() || !string.Equals(tokenEmail, email, StringComparison.OrdinalIgnoreCase))
-                    {
-                        response.StatusCode = ResponseCode.Unauthorized;
-                        response.ErrorMessage = "You are not allowed to access this user's data.";
-                        return response;
-                    }
-                }
-                else if (userId.HasValue) // if only userId is provided
-                {
-                    if (tokenUserId != userId.ToString())
-                    {
-                        response.StatusCode = ResponseCode.Unauthorized;
-                        response.ErrorMessage = "You are not allowed to access this user's data by ID.";
-                        return response;
-                    }
-                }
-                else if (!string.IsNullOrWhiteSpace(email)) // if only email is provided
-                {
-                    if (!string.Equals(tokenEmail, email, StringComparison.OrdinalIgnoreCase))
-                    {
-                        response.StatusCode = ResponseCode.Unauthorized;
-                        response.ErrorMessage = "You are not allowed to access this user's data by email.";
-                        return response;
-                    }
-                }
-                else
-                {
-                    response.StatusCode = ResponseCode.BadRequest;
-                    response.ErrorMessage = "User ID or Email is required.";
+                    response.StatusCode = ResponseCode.Unauthorized;
+                    response.ErrorMessage = "Invalid Token";
                     return response;
                 }
 
@@ -226,7 +72,7 @@ namespace Infrastructure.Services.User
         public ResponseVM ChangePassword(ChangePasswordVM user)
         {
             ResponseVM response = ResponseVM.Instance;
-            string email = tokenService?.Email;
+            string? email = tokenService?.Email;
             if(email == null)
             {
                 response.StatusCode = ResponseCode.Unauthorized;

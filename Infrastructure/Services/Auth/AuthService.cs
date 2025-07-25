@@ -1,10 +1,15 @@
 ﻿using Application.DataTransferModels.ResponseModel;
+using Application.DataTransferModels.UserViewModels;
 using Application.Interfaces.Auth;
+using Application.Mappers;
 using CommonOperations.Constants;
 using CommonOperations.Encryption;
 using CommonOperations.Methods;
+using Dapper;
+using Domain.Models.Entities.Token;
 using Infrastructure.Context;
 using MailKit.Security;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using MimeKit;
@@ -12,11 +17,178 @@ using Org.BouncyCastle.Bcpg;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
+using Application.DataTransferModels.TokenVM;
 
 namespace Infrastructure.Services.Auth
 {
     public class AuthService(ClientDBContext clientDBContext, IConfiguration config) : IAuthService
     {
+        public ResponseVM SignUp(RegisterUserVM user)
+        {
+            ResponseVM response = ResponseVM.Instance;
+
+            if (!string.IsNullOrWhiteSpace(user.Username)
+                && !string.IsNullOrWhiteSpace(user.Email)
+                && !string.IsNullOrWhiteSpace(user.Password))
+            {
+                var existingUser = clientDBContext.Users.FirstOrDefault(u => u.Email == user.Email);
+                if (existingUser != null)
+                {
+                    response.StatusCode = ResponseCode.Conflict;
+                    response.ErrorMessage = "Error Signing Up! Email already in use.";
+                    return response;
+                }
+
+                if (!Methods.IsValidEmailFormat(user.Email))
+                {
+                    response.StatusCode = ResponseCode.BadRequest;
+                    response.ErrorMessage = "Invalid Email Format";
+                    return response;
+                }
+
+                response = SendOTP(user.Email);
+
+                if (response.StatusCode != ResponseCode.Success)
+                {
+                    response.StatusCode = ResponseCode.BadRequest;
+                    response.ErrorMessage = "Failed to send OTP. Please try again.";
+                    return response;
+                }
+
+                try
+                {
+                    Domain.Models.Entities.Users.User userToSave = user.ToDomainModel();
+                    userToSave.OTP = response.Data;
+                    userToSave.OTPExpiry = DateTime.UtcNow.AddMinutes(60);
+                    userToSave.Password = Encryption.EncryptPassword(user.Password);
+                    var result = clientDBContext.Users.Add(userToSave);
+                    clientDBContext.SaveChanges();
+                    response.StatusCode = ResponseCode.Success;
+                    response.ResponseMessage = "User Created Successfully";
+                    response.Data = new
+                    {
+                        UserID = result.Entity.UserID
+                    };
+                }
+                catch (Exception ex)
+                {
+                    response.StatusCode = ResponseCode.BadRequest;
+                    response.ErrorMessage = "Failed to Create User: " + ex.Message;
+                }
+            }
+            else
+            {
+                response.StatusCode = ResponseCode.BadRequest;
+                response.ErrorMessage = "Error Signing Up! Username, Email and Password are required!";
+            }
+            return response;
+        }
+
+        public ResponseVM SignIn(LoginUserVM user)
+        {
+            ResponseVM response = ResponseVM.Instance;
+
+            if (!string.IsNullOrWhiteSpace(user.Email) && !string.IsNullOrWhiteSpace(user.Password))
+            {
+                try
+                {
+                    var parameters = new DynamicParameters();
+                    parameters.Add("@Email", user.Email);
+                    parameters.Add("@Password", Encryption.EncryptPassword(user.Password));
+                    var users = Methods.ExecuteStoredProceduresList("SP_GetUserDetails", parameters);
+
+                    if (users == null || !users.Result.Any())
+                    {
+                        response.StatusCode = ResponseCode.Unauthorized;
+                        response.ErrorMessage = "Invalid Credentials.";
+                        return response;
+                    }
+                    dynamic firstUser = users.Result.First();
+                    var userJson = JsonSerializer.Serialize(firstUser);
+                    var userEntity = JsonSerializer.Deserialize<Domain.Models.Entities.Users.User>(userJson)!;
+
+                    if (firstUser.IsDeleted)
+                    {
+                        response.StatusCode = ResponseCode.Success;
+                        response.ErrorMessage = "User account is deleted.";
+                        response.Data = new
+                        {
+                            isDeleted = userEntity.IsDeleted
+                        };
+                        return response;
+                    }
+
+                    if (!firstUser.IsActive)
+                    {
+                        response.StatusCode = ResponseCode.Success;
+                        response.ErrorMessage = "User account is not active. Please verify your email.";
+                        response.Data = new
+                        {
+                            isActive = userEntity.IsActive
+                        };
+                        return response;
+                    }
+
+                    response.StatusCode = ResponseCode.Success;
+                    response.ResponseMessage = "Login Successful";
+                    AuthResult tokens = GenerateTokens(userEntity);
+                    UserDTO userDTO = UserMapper.MapToDTO(users.Result);
+                    response.Data = UserMapper.FlattenUserWithToken(userDTO, tokens.AccessToken, tokens.RefreshToken);
+                }
+                catch (Exception ex)
+                {
+                    response.StatusCode = ResponseCode.BadRequest;
+                    response.ErrorMessage = "Error Signing In!: " + ex.Message;
+                }
+            }
+            else
+            {
+                response.StatusCode = ResponseCode.BadRequest;
+                response.ErrorMessage = "Error Signing In! Email and Password are required!";
+            }
+
+            return response;
+        }
+
+        public ResponseVM SignOut(TokenRequestVM refreshToken)
+        {
+            ResponseVM response = ResponseVM.Instance;
+            var token = clientDBContext.RefreshTokens.FirstOrDefault(x => x.Token == refreshToken.RefreshToken);
+            if (token == null)
+            {
+                response.StatusCode = ResponseCode.Unauthorized;
+                response.ErrorMessage = "Invalid refresh token.";
+                return response;
+            }
+            token.IsRevoked = true;
+            clientDBContext.SaveChanges();
+            response.StatusCode = ResponseCode.Success;
+            response.ResponseMessage = "Logged out successfully.";
+            return response;
+        }
+
+        public AuthResult GenerateTokens(Domain.Models.Entities.Users.User user)
+        {
+            var accessToken = GenerateJWT(user);
+
+            var refreshToken = new RefreshToken
+            {
+                Token = Guid.NewGuid().ToString(),
+                UserId = user.UserID,
+                ExpiresAt = DateTime.UtcNow.AddDays(15)
+            };
+
+            clientDBContext.RefreshTokens.Add(refreshToken);
+            clientDBContext.SaveChanges();
+
+            return new AuthResult
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken.Token
+            };
+        }
+
         public string GenerateJWT(Domain.Models.Entities.Users.User user)
         {
             var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(config["JWT:Secret"]!));
@@ -48,6 +220,29 @@ namespace Infrastructure.Services.Auth
             var securityToken = tokenHandler.CreateToken(tokenDescriptor);
 
             return tokenHandler.WriteToken(securityToken);
+        }
+
+        public ResponseVM SendOTP(string email, string? subject = "Welcome To TopicTap")
+        {
+            ResponseVM response = ResponseVM.Instance;
+            long OTP = Methods.GenerateOTP();
+            string template = $"Your OTP to register account is: {OTP}";
+            string emailSubject = subject!;
+            string emailBody = template;
+
+            try
+            {
+                SendEmail(email, emailSubject, emailBody);
+                response.StatusCode = ResponseCode.Success;
+                response.Data = OTP;
+
+            }
+            catch (Exception ex)
+            {
+                response.StatusCode = ResponseCode.BadRequest;
+                response.ResponseMessage = "Failed to send email: " + ex.Message;
+            }
+            return response;
         }
 
         public ResponseVM ResendOTP(string email, string? operation = "resend-otp")
@@ -102,29 +297,6 @@ namespace Infrastructure.Services.Auth
             }
         }
 
-        public ResponseVM SendOTP(string email, string? subject = "Welcome To TopicTap")
-        {
-            ResponseVM response = ResponseVM.Instance;
-            long OTP = Methods.GenerateOTP();
-            string template = $"Your OTP to register account is: {OTP}";
-            string emailSubject = subject!;
-            string emailBody = template;
-
-            try
-            {
-                SendEmail(email, emailSubject, emailBody);
-                response.StatusCode = ResponseCode.Success;
-                response.Data = OTP;
-
-            }
-            catch (Exception ex)
-            {
-                response.StatusCode = ResponseCode.BadRequest;
-                response.ResponseMessage = "Failed to send email: " + ex.Message;
-            }
-            return response;
-        }
-
         public ResponseVM VerifyOTP(string email, long otp)
         {
             ResponseVM response = ResponseVM.Instance;
@@ -137,7 +309,7 @@ namespace Infrastructure.Services.Auth
             }
             if (user.OTP == otp && user.OTPExpiry > DateTime.UtcNow)
             {
-                if(!user.IsActive) user.IsActive = true;
+                if (!user.IsActive) user.IsActive = true;
                 user.OTPExpiry = DateTime.MinValue;
                 user.OTP = 0L;
                 clientDBContext.SaveChanges();
@@ -216,6 +388,38 @@ namespace Infrastructure.Services.Auth
                 response.StatusCode = ResponseCode.BadRequest;
                 response.ErrorMessage = "Failed to reset password: " + ex.Message;
             }
+            return response;
+        }
+
+        public ResponseVM RefreshToken(TokenRequestVM refreshTokenRequest)
+        {
+            ResponseVM response = ResponseVM.Instance;
+            var refreshToken = clientDBContext.RefreshTokens
+                .FirstOrDefault(r => r.Token == refreshTokenRequest.RefreshToken);
+            if (refreshToken == null || refreshToken.IsRevoked || refreshToken.ExpiresAt < DateTime.UtcNow)
+            {
+                response.StatusCode = ResponseCode.Unauthorized;
+                response.ErrorMessage = "Invalid or expired refresh token.";
+                return response;
+            }
+            var user = clientDBContext.Users.Find(refreshToken.UserId);
+            if (user == null)
+            {
+                response.StatusCode = ResponseCode.NotFound;
+                response.ErrorMessage = "User not found.";
+                return response;
+            }
+            var newAccessToken = GenerateJWT(user);
+            refreshToken.Token = Guid.NewGuid().ToString();
+            refreshToken.ExpiresAt = DateTime.UtcNow.AddDays(15);
+            clientDBContext.SaveChanges();
+            response.StatusCode = ResponseCode.Success;
+            response.ResponseMessage = "Tokens refreshed successfully.";
+            response.Data = new AuthResult
+            {
+                AccessToken = newAccessToken,
+                RefreshToken = refreshToken.Token
+            };
             return response;
         }
     }
