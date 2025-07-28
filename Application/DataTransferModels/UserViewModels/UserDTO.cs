@@ -15,5 +15,6 @@ namespace Application.DataTransferModels.UserViewModels
         public DateTime? DateOfBirth { get; set; }
         public int? Level { get; set; } = 0;
         public string? Interests { get; set; } = string.Empty;
+        public string? Theme { get; set; } = "light"; 
     }
 }

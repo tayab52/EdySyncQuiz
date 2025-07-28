@@ -30,7 +30,8 @@ namespace Application.Mappers
                 DateOfBirth = user.DateOfBirth,
                 Gender = user.Gender,
                 Level = user.Level,
-                Interests = user.Interests
+                Interests = user.Interests,
+                Theme = user.Theme ?? "light"
             };
         }
 
@@ -48,7 +49,8 @@ namespace Application.Mappers
                 DateOfBirth = user.DateOfBirth,
                 Gender = user.Gender,
                 Level = user.Level,
-                Interests = user.Interests
+                Interests = user.Interests,
+                Theme = user.Theme ?? "light"
             };
         }
 
@@ -67,7 +69,8 @@ namespace Application.Mappers
                 Gender = first.Gender,
                 DateOfBirth = first.DateOfBirth,
                 Level = first.Level,
-                Interests = first.Interests
+                Interests = first.Interests,
+                Theme = first.Theme,
             };
             return dto;
         }
@@ -88,7 +91,8 @@ namespace Application.Mappers
                 dto.Gender,
                 dto.DateOfBirth,
                 dto.Level,
-                dto.Interests
+                dto.Interests,
+                dto.Theme
             };
         }
     }

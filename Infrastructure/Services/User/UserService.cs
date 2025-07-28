@@ -138,10 +138,12 @@ namespace Infrastructure.Services.User
                 existingUser.Languages = user.Languages;
                 existingUser.Gender = user.Gender;
                 existingUser.Level = user.Level;
+                existingUser.Theme = user.Theme ?? "light";
                 clientDBContext.Users.Update(existingUser);
                 clientDBContext.SaveChanges();
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "User updated successfully.";
+                response.Data = existingUser.ToUserDTO();
                 return response;
             }
             catch (Exception ex)
@@ -352,6 +354,41 @@ namespace Infrastructure.Services.User
                 clientDBContext.SaveChanges();
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "Interests updated successfully.";
+                response.Data = existingUser.ToUserDTO();
+                return response;
+            }
+            catch (Exception ex)
+            {
+                response.StatusCode = ResponseCode.InternalServerError;
+                response.ErrorMessage = "Failed to update user: " + ex.Message;
+                return response;
+            }
+        }
+
+        public ResponseVM UpdateTheme(string theme)
+        {
+            ResponseVM response = ResponseVM.Instance;
+            try
+            {
+                string tokenUserId = tokenService.UserID;
+                if (string.IsNullOrEmpty(tokenUserId))
+                {
+                    response.StatusCode = ResponseCode.Unauthorized;
+                    response.ErrorMessage = "Invalid Token";
+                    return response;
+                }
+                var existingUser = clientDBContext.Users.Find(int.Parse(tokenUserId));
+                if (existingUser == null)
+                {
+                    response.StatusCode = ResponseCode.NotFound;
+                    response.ErrorMessage = "User not found.";
+                    return response;
+                }
+                existingUser.Theme = theme;
+                clientDBContext.Users.Update(existingUser);
+                clientDBContext.SaveChanges();
+                response.StatusCode = ResponseCode.Success;
+                response.ResponseMessage = "Level updated successfully.";
                 response.Data = existingUser.ToUserDTO();
                 return response;
             }

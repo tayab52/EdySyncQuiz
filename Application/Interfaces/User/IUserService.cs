@@ -14,5 +14,6 @@ namespace Application.Interfaces.User
         ResponseVM UpdateUserLanguages(string languages);
         ResponseVM UpdateUserInterests(string interests);
         ResponseVM UpdateUserLevel(int level);
+        ResponseVM UpdateTheme(string theme);
     }
 }

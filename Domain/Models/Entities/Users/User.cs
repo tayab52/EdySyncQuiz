@@ -46,7 +46,9 @@ namespace Domain.Models.Entities.Users
 
         [Column(TypeName = "nvarchar(2000)")]
         public string ProfileImage { get; set; } = "";
+
         public string ImageKey { get; set; } = "";
+
         public DateTime ExpiresAt { get; set; }
 
         [Column("Interests", TypeName = "nvarchar(MAX)")]
@@ -58,7 +60,7 @@ namespace Domain.Models.Entities.Users
 
         public string? Languages { get; set; } = string.Empty;
 
-        public string? Theme { get; set; } = "light";
+        public string? Theme { get; set; } = "light"; 
 
         public int? Level { get; set; } = 0; // Entry Level (Defined in CommonOperations)
     }

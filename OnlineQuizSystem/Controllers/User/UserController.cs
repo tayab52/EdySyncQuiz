@@ -31,7 +31,7 @@ namespace PresentationAPI.Controllers.User
         }
 
         // /api/user/delete-account/{userID}
-        [HttpPost("Delete-Account")]
+        [HttpDelete("Delete-Account")]
         public IActionResult DeleteAccount() // Requires Valid Token
         { // User must be logged in, and can only delete his own account
             ResponseVM response = userService.DeleteUser();
@@ -135,6 +135,37 @@ namespace PresentationAPI.Controllers.User
         public IActionResult UpdateLevel([FromBody] int level) // Requires level
         { // User must be logged in, and can only update their own level
             ResponseVM response = userService.UpdateUserLevel(level);
+            if (response.StatusCode == ResponseCode.Success)
+            {
+                return Ok(response);
+            }
+            return BadRequest(response);
+        }
+
+        // /api/user/update-theme
+        [HttpPatch("Update-Theme")]
+        public IActionResult UpdateTheme([FromBody] string theme) // Requires theme
+        { // User must be logged in, and can only update their own theme
+            if (string.IsNullOrEmpty(theme))
+            {
+                return BadRequest("Theme is required to update theme.");
+            }
+            ResponseVM response = userService.UpdateTheme(theme);
+            if (response.StatusCode == ResponseCode.Success)
+            {
+                return Ok(response);
+            }
+            return BadRequest(response);
+        }
+
+        [HttpPut("Update-User")]
+        public IActionResult UpdateUser(UserDTO user) // Requires UserDTO
+        { // User must be logged in, and can only update their own account details. updates whole user details
+            if (user == null)
+            {
+                return BadRequest("User data is required to update user.");
+            }
+            ResponseVM response = userService.UpdateUser(user);
             if (response.StatusCode == ResponseCode.Success)
             {
                 return Ok(response);
