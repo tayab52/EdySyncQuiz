@@ -68,7 +68,7 @@ namespace Infrastructure.Services.Auth
                     response.ResponseMessage = "User Created Successfully";
                     response.Data = new
                     {
-                        UserID = result.Entity.UserID
+                        result.Entity.UserID
                     };
                 }
                 catch (Exception ex)
@@ -176,7 +176,7 @@ namespace Infrastructure.Services.Auth
             {
                 Token = Guid.NewGuid().ToString(),
                 UserId = user.UserID,
-                ExpiresAt = DateTime.UtcNow.AddDays(15)
+                ExpiresAt = DateTime.UtcNow.AddDays(5)
             };
 
             clientDBContext.RefreshTokens.Add(refreshToken);
@@ -207,7 +207,7 @@ namespace Infrastructure.Services.Auth
                 Subject = new ClaimsIdentity(claims),
                 Issuer = config["JWT:ValidIssuer"],
                 Audience = config["JWT:ValidAudience"],
-                Expires = DateTime.UtcNow.AddDays(7),
+                Expires = DateTime.UtcNow.AddMinutes(15),
                 SigningCredentials = new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256),
 
                 EncryptingCredentials = new EncryptingCredentials(
@@ -411,7 +411,7 @@ namespace Infrastructure.Services.Auth
             }
             var newAccessToken = GenerateJWT(user);
             refreshToken.Token = Guid.NewGuid().ToString();
-            refreshToken.ExpiresAt = DateTime.UtcNow.AddDays(15);
+            refreshToken.ExpiresAt = DateTime.UtcNow.AddDays(5);
             clientDBContext.SaveChanges();
             response.StatusCode = ResponseCode.Success;
             response.ResponseMessage = "Tokens refreshed successfully.";

@@ -14,9 +14,9 @@ namespace PresentationAPI.Controllers.Auth
 {
     [Route("api/auth")]
     [ApiController]
-    public class AuthController(ClientDBContext clientDBContext, IUserService userService, IAuthService authService) : Controller
+    public class AuthController(IAuthService authService) : Controller
     {
-        // /api/user/signup
+        // /api/auth/signup
         [HttpPost("SignUp")]
         public IActionResult SignUp(RegisterUserVM user) // Requires Username, Email, Password
         { // user can sign up with username, email, and password
@@ -48,7 +48,7 @@ namespace PresentationAPI.Controllers.Auth
             return BadRequest(response);
         }
 
-
+        // /api/auth/signout
         [HttpPost("SignOut")]
         public IActionResult Logout(TokenRequestVM refreshToken) // Requires Refresh Token
         { // user can sign out by providing their refresh token, which will invalidate the token
@@ -64,7 +64,7 @@ namespace PresentationAPI.Controllers.Auth
             return BadRequest(response);
         }
 
-        // api/user/verify-otp?email={email}&otp={otp}
+        // /api/auth/verify-otp
         [HttpPost("Verify-OTP")]
         public IActionResult VerifyOTP([FromBody] VerifyOTPVM model) // Requires Email and OTP
         { // after correctly signing up, user needs to verify their email with OTP. by default, users status IsActive is false
@@ -82,11 +82,10 @@ namespace PresentationAPI.Controllers.Auth
             return BadRequest(response);
         }
 
-
-
+        // /api/auth/resend-otp
         [HttpPost("Resend-OTP")]
-        public IActionResult ResendOTP([FromBody] EmailVM model)
-        {
+        public IActionResult ResendOTP([FromBody] EmailVM model) // Requires Email to resend OTP
+        { // user can resend OTP to their email if they didn't receive it during signup
             if (string.IsNullOrEmpty(model.Email))
             {
                 return BadRequest("Email is required to resend OTP.");
@@ -100,7 +99,7 @@ namespace PresentationAPI.Controllers.Auth
             return BadRequest(response);
         }
 
-        // api/user/forgot-password?email={email}
+        // /api/auth/forgot-password
         [HttpPost("Forgot-Password")]
         public IActionResult ForgotPassword([FromBody] EmailVM model) // Requires Email to send OTP for password reset
         { // user can reset their password by providing their email, which will send an OTP to that email
@@ -117,7 +116,7 @@ namespace PresentationAPI.Controllers.Auth
             return BadRequest(response);
         }
 
-        // /api/user/reset-password
+        // /api/auth/reset-password
         [HttpPost("Reset-Password")]
         public IActionResult ResetPassword(ResetPasswordVM user) // Requires Email, Password and OTP
         { // After forgot-password, reset-password api will be called. Which will reset the user's password
@@ -133,10 +132,10 @@ namespace PresentationAPI.Controllers.Auth
             return BadRequest(response);
         }
 
-        // api/user/refresh
+        // /api/auth/refresh
         [HttpPost("Refresh")]
-        public IActionResult Refresh(TokenRequestVM request)
-        { // Requires Refresh Token to generate new access token
+        public IActionResult Refresh(TokenRequestVM request) // Requires Refresh Token to generate new access token
+        { // user can refresh their access token by providing their refresh token
             if (request == null || string.IsNullOrEmpty(request.RefreshToken))
             {
                 return BadRequest("Refresh token is required.");

@@ -17,7 +17,6 @@
         {
             get
             {
-                //if (instance == null)
                 {
                     instance = new ResponseVM();
                 }

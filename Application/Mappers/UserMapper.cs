@@ -34,6 +34,24 @@ namespace Application.Mappers
             };
         }
 
+        public static User ToUser(this UserDTO user)
+        {
+            return new User
+            {
+                UserID = (int)user.UserID!,
+                Username = user.Username!,
+                Email = user.Email!,
+                IsActive = (bool)user.IsActive!,
+                IsDeleted = (bool)user.IsDeleted!,
+                IsDataSubmitted = (bool)user.IsDataSubmitted!,
+                Languages = user.Languages,
+                DateOfBirth = user.DateOfBirth,
+                Gender = user.Gender,
+                Level = user.Level,
+                Interests = user.Interests
+            };
+        }
+
         public static UserDTO MapToDTO(IEnumerable<dynamic> records)
         {
             var first = records.First();

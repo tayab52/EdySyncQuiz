@@ -68,7 +68,7 @@ namespace PresentationAPI
                             if (context.Exception is SecurityTokenExpiredException)
                             {
                                 ResponseVM response = ResponseVM.Instance;
-                                response.StatusCode = ResponseCode.Unauthorized;
+                                response.StatusCode = ResponseCode.ProxyAuthenticationRequired;
                                 response.ErrorMessage = "Your session has expired. Please login again.";
                                 context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                                 context.Response.ContentType = "application/json";

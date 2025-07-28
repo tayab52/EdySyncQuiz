@@ -19,7 +19,7 @@ using System.Text.Json;
 
 namespace Infrastructure.Services.User
 {
-    public class UserService(IAuthService authService, ClientDBContext clientDBContext, TokenService tokenService, IConfiguration config, IAmazonS3 s3Client, WasabiService wasabiService) : IUserService
+    public class UserService(ClientDBContext clientDBContext, TokenService tokenService, IConfiguration config, IAmazonS3 s3Client, WasabiService wasabiService) : IUserService
     {
         public ResponseVM GetUser()
         {
@@ -101,7 +101,7 @@ namespace Infrastructure.Services.User
                 response.ResponseMessage = "Password updated successfully.";
                 response.Data = new
                 {
-                    UserID = existingUser.UserID
+                    existingUser.UserID
                 };
             }
             catch
@@ -110,6 +110,46 @@ namespace Infrastructure.Services.User
                 response.ErrorMessage = "Failed to update user: ";
             }
             return response;
+        }
+
+        public ResponseVM UpdateUser(UserDTO user)
+        {
+            ResponseVM response = ResponseVM.Instance;
+            try
+            {
+                string tokenUserId = tokenService.UserID;
+                if (string.IsNullOrEmpty(tokenUserId))
+                {
+                    response.StatusCode = ResponseCode.Unauthorized;
+                    response.ErrorMessage = "Invalid Token";
+                    return response;
+                }
+                var existingUser = clientDBContext.Users.Find(tokenUserId);
+                if (existingUser == null)
+                {
+                    response.StatusCode = ResponseCode.NotFound;
+                    response.ErrorMessage = "User not found.";
+                    return response;
+                }
+                existingUser.Username = user.Username!;
+                existingUser.Email = user.Email!;
+                existingUser.DateOfBirth = user.DateOfBirth;
+                existingUser.Interests = user.Interests;
+                existingUser.Languages = user.Languages;
+                existingUser.Gender = user.Gender;
+                existingUser.Level = user.Level;
+                clientDBContext.Users.Update(existingUser);
+                clientDBContext.SaveChanges();
+                response.StatusCode = ResponseCode.Success;
+                response.ResponseMessage = "User updated successfully.";
+                return response;
+            }
+            catch (Exception ex)
+            {
+                response.StatusCode = ResponseCode.InternalServerError;
+                response.ErrorMessage = "Failed to update user: " + ex.Message;
+                return response;
+            }
         }
 
         public ResponseVM DeleteUser()
@@ -251,6 +291,111 @@ namespace Infrastructure.Services.User
             response.ResponseMessage = "User profile image retrieved successfully.";
             response.Data = new { ProfileImageUrl = user.ProfileImage };
             return response;
+        }
+
+        public ResponseVM UpdateUserLanguages(string languages)
+        {
+            ResponseVM response = ResponseVM.Instance;
+            try
+            {
+                string tokenUserId = tokenService.UserID;
+                if (string.IsNullOrEmpty(tokenUserId))
+                {
+                    response.StatusCode = ResponseCode.Unauthorized;
+                    response.ErrorMessage = "Invalid Token";
+                    return response;
+                }
+                var existingUser = clientDBContext.Users.Find(int.Parse(tokenUserId));
+                if (existingUser == null)
+                {
+                    response.StatusCode = ResponseCode.NotFound;
+                    response.ErrorMessage = "User not found.";
+                    return response;
+                }
+                existingUser.Languages = languages;
+                clientDBContext.Users.Update(existingUser);
+                clientDBContext.SaveChanges();
+                response.StatusCode = ResponseCode.Success;
+                response.ResponseMessage = "Languages updated successfully.";
+                response.Data = existingUser.ToUserDTO();
+                return response;
+            }
+            catch (Exception ex)
+            {
+                response.StatusCode = ResponseCode.InternalServerError;
+                response.ErrorMessage = "Failed to update user: " + ex.Message;
+                return response;
+            }
+        }
+
+        public ResponseVM UpdateUserInterests(string interests)
+        {
+            ResponseVM response = ResponseVM.Instance;
+            try
+            {
+                string tokenUserId = tokenService.UserID;
+                if (string.IsNullOrEmpty(tokenUserId))
+                {
+                    response.StatusCode = ResponseCode.Unauthorized;
+                    response.ErrorMessage = "Invalid Token";
+                    return response;
+                }
+                var existingUser = clientDBContext.Users.Find(int.Parse(tokenUserId));
+                if (existingUser == null)
+                {
+                    response.StatusCode = ResponseCode.NotFound;
+                    response.ErrorMessage = "User not found.";
+                    return response;
+                }
+                existingUser.Interests = interests;
+                clientDBContext.Users.Update(existingUser);
+                clientDBContext.SaveChanges();
+                response.StatusCode = ResponseCode.Success;
+                response.ResponseMessage = "Interests updated successfully.";
+                response.Data = existingUser.ToUserDTO();
+                return response;
+            }
+            catch (Exception ex)
+            {
+                response.StatusCode = ResponseCode.InternalServerError;
+                response.ErrorMessage = "Failed to update user: " + ex.Message;
+                return response;
+            }
+        }
+
+        public ResponseVM UpdateUserLevel(int level)
+        {
+            ResponseVM response = ResponseVM.Instance;
+            try
+            {
+                string tokenUserId = tokenService.UserID;
+                if (string.IsNullOrEmpty(tokenUserId))
+                {
+                    response.StatusCode = ResponseCode.Unauthorized;
+                    response.ErrorMessage = "Invalid Token";
+                    return response;
+                }
+                var existingUser = clientDBContext.Users.Find(int.Parse(tokenUserId));
+                if (existingUser == null)
+                {
+                    response.StatusCode = ResponseCode.NotFound;
+                    response.ErrorMessage = "User not found.";
+                    return response;
+                }
+                existingUser.Level = level;
+                clientDBContext.Users.Update(existingUser);
+                clientDBContext.SaveChanges();
+                response.StatusCode = ResponseCode.Success;
+                response.ResponseMessage = "Level updated successfully.";
+                response.Data = existingUser.ToUserDTO();
+                return response;
+            }
+            catch (Exception ex)
+            {
+                response.StatusCode = ResponseCode.InternalServerError;
+                response.ErrorMessage = "Failed to update user: " + ex.Message;
+                return response;
+            }
         }
     }
 }

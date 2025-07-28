@@ -11,7 +11,7 @@ namespace PresentationAPI.Controllers.User
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class UserController(IUserService userService, IAuthService authService, IUserDetailsService userDetailsService) : Controller
+    public class UserController(IUserService userService, IUserDetailsService userDetailsService) : Controller
     {
         // /api/user/change-password
         [HttpPost("Change-Password")]
@@ -91,6 +91,50 @@ namespace PresentationAPI.Controllers.User
         public IActionResult GetProfileImage() // Requires User ID and Valid Token
         { // User must be logged in, and can only access their own profile image
             ResponseVM response = userService.GetUserProfileImage();
+            if (response.StatusCode == ResponseCode.Success)
+            {
+                return Ok(response);
+            }
+            return BadRequest(response);
+        }
+
+        // /api/user/update-languages
+        [HttpPatch("Update-Languages")]
+        public IActionResult UpdateLanguages([FromBody] string languages) // Requires Languages String
+        { // User must be logged in, and can only update their own languages
+            if (string.IsNullOrEmpty(languages))
+            {
+                return BadRequest("Languages string is required to update languages.");
+            }
+            ResponseVM response = userService.UpdateUserLanguages(languages);
+            if (response.StatusCode == ResponseCode.Success)
+            {
+                return Ok(response);
+            }
+            return BadRequest(response);
+        }
+
+        // /api/user/update-interests
+        [HttpPatch("Update-Interests")]
+        public IActionResult UpdateInterests([FromBody] string interests) // Requires Interests String
+        { // User must be logged in, and can only update their own interests
+            if (string.IsNullOrEmpty(interests))
+            {
+                return BadRequest("Interests string is required to update interests.");
+            }
+            ResponseVM response = userService.UpdateUserInterests(interests);
+            if (response.StatusCode == ResponseCode.Success)
+            {
+                return Ok(response);
+            }
+            return BadRequest(response);
+        }
+
+        // /api/user/update-level
+        [HttpPatch("Update-Level")]
+        public IActionResult UpdateLevel([FromBody] int level) // Requires level
+        { // User must be logged in, and can only update their own level
+            ResponseVM response = userService.UpdateUserLevel(level);
             if (response.StatusCode == ResponseCode.Success)
             {
                 return Ok(response);

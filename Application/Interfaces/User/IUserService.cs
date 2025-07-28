@@ -8,7 +8,11 @@ namespace Application.Interfaces.User
         ResponseVM GetUser();
         ResponseVM ChangePassword(ChangePasswordVM user);
         ResponseVM DeleteUser();
+        ResponseVM UpdateUser(UserDTO user);
         Task<ResponseVM> SaveUserProfileImage(string base64Image);
         ResponseVM GetUserProfileImage();
+        ResponseVM UpdateUserLanguages(string languages);
+        ResponseVM UpdateUserInterests(string interests);
+        ResponseVM UpdateUserLevel(int level);
     }
 }
