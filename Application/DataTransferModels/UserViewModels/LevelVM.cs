@@ -6,10 +6,8 @@ using System.Threading.Tasks;
 
 namespace Application.DataTransferModels.UserViewModels
 {
-    public class VerifyOTPVM
+    public class LevelVM
     {
-        public string Email { get; set; } = string.Empty;
-        public long OTP { get; set; } = 0;
-
+        public int Level { get; set; } = 0;
     }
 }

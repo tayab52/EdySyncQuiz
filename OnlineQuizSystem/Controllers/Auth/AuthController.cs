@@ -68,11 +68,11 @@ namespace PresentationAPI.Controllers.Auth
         [HttpPost("Verify-OTP")]
         public IActionResult VerifyOTP([FromBody] VerifyOTPVM model) // Requires Email and OTP
         { // after correctly signing up, user needs to verify their email with OTP. by default, users status IsActive is false
-            if (string.IsNullOrEmpty(model.email))
+            if (string.IsNullOrEmpty(model.Email))
             {
                 return BadRequest("Email is required.");
             }
-            ResponseVM response = authService.VerifyOTP(model.email, model.otp);
+            ResponseVM response = authService.VerifyOTP(model.Email, model.OTP);
 
             if (response.StatusCode == ResponseCode.Success)
             {
