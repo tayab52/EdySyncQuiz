@@ -46,10 +46,9 @@ namespace PresentationAPI
                     {
                         OnAuthenticationFailed = context =>
                         {
-                            // Get the request path
                             var path = context.HttpContext.Request.Path.Value;
 
-                            var excludedPaths = new[] {
+                            string[] excludedPaths = [
                                 "/api/auth/SignIn",
                                 "/api/auth/SignUp",
                                 "/api/auth/Verify-OTP",
@@ -58,7 +57,7 @@ namespace PresentationAPI
                                 "/api/auth/Reset-Password",
                                 "/api/auth/Refresh",
                                 "/api/language"
-                            };
+                            ];
 
                             if (excludedPaths.Any(p => path!.Equals(p, StringComparison.OrdinalIgnoreCase)))
                             {
@@ -80,21 +79,6 @@ namespace PresentationAPI
                     };
                 });
 
-            builder.Services.AddSingleton<IAmazonS3>(sp =>
-            {
-                var config = sp.GetRequiredService<IConfiguration>();
-                var settings = config.GetSection("WasabiSettings");
-
-                return new AmazonS3Client(
-                    settings["AccessKey"],
-                    settings["SecretKey"],
-                    new AmazonS3Config
-                    {
-                        ServiceURL = settings["ServiceUrl"],
-                        ForcePathStyle = true
-                    });
-            });
-
             builder.Services.AddHttpContextAccessor();
 
             builder.Services.AddCustomServices();
@@ -111,7 +95,7 @@ namespace PresentationAPI
                     Scheme = "bearer", 
                     BearerFormat = "JWT",
                     In = ParameterLocation.Header,
-                    Description = "Paste your JWT token here. No need to add 'Bearer' prefix."
+                    Description = "Enter your JWT token here."
                 });
 
                 options.AddSecurityRequirement(new OpenApiSecurityRequirement
