@@ -100,18 +100,22 @@ namespace PresentationAPI.Controllers.User
 
 		// /api/user/update-languages
 		[HttpPatch("Update-Languages")]
-		public IActionResult UpdateLanguages([FromBody] LanguageVM languages) // Requires Languages String
+		public ResponseVM UpdateLanguages([FromBody] LanguageVM languages) // Requires Languages String
 		{ // User must be logged in, and can only update their own languages
-			if (string.IsNullOrEmpty(languages.Language))
+			ResponseVM response = ResponseVM.Instance;
+
+            if (string.IsNullOrEmpty(languages.Language))
 			{
-				return BadRequest("Languages string is required to update languages.");
+				response.ErrorMessage = "Languages string is required to update languages.";
+				response.StatusCode = ResponseCode.BadRequest;
+                return response;
 			}
-			ResponseVM response = userService.UpdateUserLanguages(languages.Language);
+            response = userService.UpdateUserLanguages(languages.Language);
 			if (response.StatusCode == ResponseCode.Success)
 			{
-				return Ok(response);
+				return response;
 			}
-			return BadRequest(response);
+			return response;
 		}
 
 		// /api/user/update-interests
