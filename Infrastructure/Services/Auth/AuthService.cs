@@ -207,7 +207,8 @@ namespace Infrastructure.Services.Auth
                 Subject = new ClaimsIdentity(claims),
                 Issuer = config["JWT:ValidIssuer"],
                 Audience = config["JWT:ValidAudience"],
-                Expires = DateTime.UtcNow.AddMinutes(15),
+                ///Change it in mints when refresh token implemeted Accurately
+                Expires = DateTime.UtcNow.AddDays(15),
                 SigningCredentials = new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256),
 
                 EncryptingCredentials = new EncryptingCredentials(
