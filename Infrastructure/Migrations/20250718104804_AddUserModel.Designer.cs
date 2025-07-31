@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Infrastructure.Migrations
 {
-    [DbContext(typeof(ClientDBContext))]
+    [DbContext(typeof(AppDBContext))]
     [Migration("20250718104804_AddUserModel")]
     partial class AddUserModel
     {

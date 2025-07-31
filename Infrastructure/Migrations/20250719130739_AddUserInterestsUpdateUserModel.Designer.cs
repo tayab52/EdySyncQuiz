@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Infrastructure.Migrations
 {
-    [DbContext(typeof(ClientDBContext))]
+    [DbContext(typeof(AppDBContext))]
     [Migration("20250719130739_AddUserInterestsUpdateUserModel")]
     partial class AddUserInterestsUpdateUserModel
     {

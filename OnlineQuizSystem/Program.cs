@@ -18,7 +18,7 @@ namespace PresentationAPI
             var builder = WebApplication.CreateBuilder(args);
 
             var connectionString = builder.Configuration.GetConnectionString("ConnectionString");
-            builder.Services.AddDbContext<ClientDBContext>(options => options.UseSqlServer(connectionString));
+            builder.Services.AddDbContext<AppDBContext>(options => options.UseSqlServer(connectionString));
 
             builder.Services.AddControllers();
 

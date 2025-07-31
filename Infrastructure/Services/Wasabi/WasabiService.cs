@@ -57,7 +57,6 @@ namespace Infrastructure.Services.Wasabi
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Wasabi Upload Failed: " + ex.Message);
                 throw;
             }
         }

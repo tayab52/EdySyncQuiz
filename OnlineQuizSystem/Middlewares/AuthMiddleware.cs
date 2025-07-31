@@ -22,7 +22,7 @@ namespace PresentationAPI.Middlewares
             _config = config;
         }
 
-        public async Task Invoke(HttpContext context, TokenService tokenService, ClientDBContext dbContext, IAuthService authService)
+        public async Task Invoke(HttpContext context, TokenService tokenService, AppDBContext dbContext, IAuthService authService)
         {
             var path = context.Request.Path.Value?.ToLower();
 

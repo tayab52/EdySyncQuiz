@@ -14,5 +14,6 @@
         public int? Level { get; set; } = 0;
         public string? Interests { get; set; } = string.Empty;
         public string? Theme { get; set; } = "light";
+        public string? ProfileImage { get; set; } = string.Empty;
     }
 }

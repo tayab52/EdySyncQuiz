@@ -11,14 +11,14 @@ namespace PresentationAPI.Controllers.Quiz
     [ApiController]
     [Route("api/quiz")]
     [Authorize]
-    public class QuizController(ClientDBContext clientDBContext, TokenService tokenService, GeminiQuizService quizService) : Controller
+    public class QuizController(AppDBContext appDBContext, TokenService tokenService, GeminiQuizService quizService) : Controller
     {
         [HttpGet("generate-quiz")]
         public async Task<IActionResult> GenerateQuiz()
         {
             ResponseVM response = ResponseVM.Instance;
             Guid userID = tokenService.UserID;
-            var user = clientDBContext.Users.Find(userID);
+            var user = appDBContext.Users.Find(userID);
             if (user == null || string.IsNullOrWhiteSpace(user.Interests))
             {
                 response.StatusCode = ResponseCode.BadRequest;

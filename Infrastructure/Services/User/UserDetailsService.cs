@@ -7,7 +7,7 @@ using Infrastructure.Services.Token;
 
 namespace Infrastructure.Services.User
 {
-    public class UserDetailsService(ClientDBContext clientDBContext, TokenService tokenService) : IUserDetailsService
+    public class UserDetailsService(AppDBContext appDBContext, TokenService tokenService) : IUserDetailsService
     {
         public ResponseVM SaveUserDetails(UserDetailsVM userDetails)
         {
@@ -15,7 +15,7 @@ namespace Infrastructure.Services.User
             Guid userID = tokenService.UserID;
             if (userID != Guid.Empty)
             {
-                var user = clientDBContext.Users.FirstOrDefault(u => u.UserID == userID);
+                var user = appDBContext.Users.FirstOrDefault(u => u.UserID == userID);
                 if (user == null)
                 {
                     response.StatusCode = 404;
@@ -30,8 +30,8 @@ namespace Infrastructure.Services.User
                     user.Level = userDetails.Level;
                     user.Interests = userDetails.Interests;
                     user.IsDataSubmitted = true;
-                    clientDBContext.Users.Update(user);
-                    clientDBContext.SaveChanges();
+                    appDBContext.Users.Update(user);
+                    appDBContext.SaveChanges();
                     response.StatusCode = 200;
                     response.ResponseMessage = "User Details Updated Successfully";
                     response.Data = user.ToUserDTO();

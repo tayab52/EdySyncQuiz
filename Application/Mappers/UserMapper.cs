@@ -30,7 +30,8 @@ namespace Application.Mappers
                 Gender = user.Gender,
                 Level = user.Level,
                 Interests = user.Interests,
-                Theme = user.Theme ?? "light"
+                Theme = user.Theme ?? "light",
+                ProfileImage = user.ProfileImage ?? string.Empty
             };
         }
 
@@ -49,7 +50,8 @@ namespace Application.Mappers
                 Gender = user.Gender,
                 Level = user.Level,
                 Interests = user.Interests,
-                Theme = user.Theme ?? "light"
+                Theme = user.Theme ?? "light",
+                ProfileImage = user.ProfileImage ?? string.Empty
             };
         }
 
@@ -70,6 +72,7 @@ namespace Application.Mappers
                 Level = first.Level,
                 Interests = first.Interests,
                 Theme = first.Theme,
+                ProfileImage = first.ProfileImage
             };
             return dto;
         }
@@ -91,7 +94,8 @@ namespace Application.Mappers
                 dto.DateOfBirth,
                 dto.Level,
                 dto.Interests,
-                dto.Theme
+                dto.Theme,
+                dto.ProfileImage
             };
         }
     }

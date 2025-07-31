@@ -6,12 +6,12 @@ using Microsoft.Extensions.Configuration;
 
 namespace Infrastructure.Context
 {
-    public class ClientDBContext : DbContext
+    public class AppDBContext : DbContext
     {
         private readonly IHttpContextAccessor? _httpContextAccessor;
         private readonly IConfiguration? _configuration;
 
-        public ClientDBContext(DbContextOptions<ClientDBContext> options, IConfiguration? configuration = null, IHttpContextAccessor? httpContextAccessor = null)
+        public AppDBContext(DbContextOptions<AppDBContext> options, IConfiguration? configuration = null, IHttpContextAccessor? httpContextAccessor = null)
             : base(options)
         {
             _configuration = configuration;

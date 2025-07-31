@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Infrastructure.Migrations
 {
-    [DbContext(typeof(ClientDBContext))]
+    [DbContext(typeof(AppDBContext))]
     [Migration("20250731094914_ChangeUserIDToGuid")]
     partial class ChangeUserIDToGuid
     {

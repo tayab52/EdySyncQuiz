@@ -20,7 +20,7 @@ using System.Text.Json;
 
 namespace Infrastructure.Services.Auth
 {
-    public class AuthService(ClientDBContext clientDBContext, IConfiguration config) : IAuthService
+    public class AuthService(AppDBContext appDBContext, IConfiguration config) : IAuthService
     {
         public ResponseVM SignUp(RegisterUserVM user)
         {
@@ -30,7 +30,7 @@ namespace Infrastructure.Services.Auth
                 && !string.IsNullOrWhiteSpace(user.Email)
                 && !string.IsNullOrWhiteSpace(user.Password))
             {
-                var existingUser = clientDBContext.Users.FirstOrDefault(u => u.Email == user.Email);
+                var existingUser = appDBContext.Users.FirstOrDefault(u => u.Email == user.Email);
                 if (existingUser != null)
                 {
                     response.StatusCode = ResponseCode.Conflict;
@@ -60,8 +60,8 @@ namespace Infrastructure.Services.Auth
                     userToSave.OTP = response.Data;
                     userToSave.OTPExpiry = DateTime.UtcNow.AddMinutes(60);
                     userToSave.Password = Encryption.EncryptPassword(user.Password);
-                    var result = clientDBContext.Users.Add(userToSave);
-                    clientDBContext.SaveChanges();
+                    var result = appDBContext.Users.Add(userToSave);
+                    appDBContext.SaveChanges();
                     response.StatusCode = ResponseCode.Success;
                     response.ResponseMessage = "User Created Successfully";
                     response.Data = new
@@ -152,7 +152,7 @@ namespace Infrastructure.Services.Auth
         public ResponseVM SignOut(TokenRequestVM refreshToken)
         {
             ResponseVM response = ResponseVM.Instance;
-            var token = clientDBContext.RefreshTokens.FirstOrDefault(x => x.Token == refreshToken.RefreshToken);
+            var token = appDBContext.RefreshTokens.FirstOrDefault(x => x.Token == refreshToken.RefreshToken);
             if (token == null)
             {
                 response.StatusCode = ResponseCode.Unauthorized;
@@ -160,7 +160,7 @@ namespace Infrastructure.Services.Auth
                 return response;
             }
             token.IsRevoked = true;
-            clientDBContext.SaveChanges();
+            appDBContext.SaveChanges();
             response.StatusCode = ResponseCode.Success;
             response.ResponseMessage = "Logged out successfully.";
             return response;
@@ -177,8 +177,8 @@ namespace Infrastructure.Services.Auth
                 ExpiresAt = DateTime.UtcNow.AddDays(14)
             };
 
-            clientDBContext.RefreshTokens.Add(refreshToken);
-            clientDBContext.SaveChanges();
+            appDBContext.RefreshTokens.Add(refreshToken);
+            appDBContext.SaveChanges();
 
             return new AuthResult
             {
@@ -248,7 +248,7 @@ namespace Infrastructure.Services.Auth
         {
             ResponseVM response = ResponseVM.Instance;
             var normalizedEmail = email.Trim().ToLowerInvariant();
-            var user = clientDBContext.Users.FirstOrDefault(u => u.Email.ToLower().Contains(email.ToLower()));
+            var user = appDBContext.Users.FirstOrDefault(u => u.Email.ToLower().Contains(email.ToLower()));
 
             if (user == null)
             {
@@ -281,7 +281,7 @@ namespace Infrastructure.Services.Auth
 
             try
             {
-                clientDBContext.SaveChanges();
+                appDBContext.SaveChanges();
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = operation == "forgot-password"
                                                     ? "OTP to reset account sent successfully"
@@ -299,7 +299,7 @@ namespace Infrastructure.Services.Auth
         public ResponseVM VerifyOTP(string email, long otp)
         {
             ResponseVM response = ResponseVM.Instance;
-            var user = clientDBContext.Users.FirstOrDefault(u => u.Email == email);
+            var user = appDBContext.Users.FirstOrDefault(u => u.Email == email);
             if (user == null)
             {
                 response.StatusCode = ResponseCode.NotFound;
@@ -311,7 +311,7 @@ namespace Infrastructure.Services.Auth
                 if (!user.IsActive) user.IsActive = true;
                 user.OTPExpiry = DateTime.MinValue;
                 user.OTP = 0L;
-                clientDBContext.SaveChanges();
+                appDBContext.SaveChanges();
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "OTP verified successfully.";
                 response.Data = new
@@ -363,7 +363,7 @@ namespace Infrastructure.Services.Auth
         public ResponseVM ResetPassword(string email, string newPassword)
         {
             ResponseVM response = ResponseVM.Instance;
-            var user = clientDBContext.Users.FirstOrDefault(u => u.Email == email);
+            var user = appDBContext.Users.FirstOrDefault(u => u.Email == email);
             if (user == null)
             {
                 response.StatusCode = ResponseCode.NotFound;
@@ -373,7 +373,7 @@ namespace Infrastructure.Services.Auth
             user.Password = Encryption.EncryptPassword(newPassword);
             try
             {
-                clientDBContext.SaveChanges();
+                appDBContext.SaveChanges();
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "Password reset successfully.";
             }
@@ -388,7 +388,7 @@ namespace Infrastructure.Services.Auth
         public ResponseVM RefreshToken(TokenRequestVM refreshTokenRequest)
         {
             ResponseVM response = ResponseVM.Instance;
-            var refreshToken = clientDBContext.RefreshTokens
+            var refreshToken = appDBContext.RefreshTokens
                 .FirstOrDefault(r => r.Token == refreshTokenRequest.RefreshToken);
             if (refreshToken == null || refreshToken.IsRevoked || refreshToken.ExpiresAt < DateTime.UtcNow)
             {
@@ -396,7 +396,7 @@ namespace Infrastructure.Services.Auth
                 response.ErrorMessage = "Invalid or expired refresh token.";
                 return response;
             }
-            var user = clientDBContext.Users.Find(refreshToken.UserId);
+            var user = appDBContext.Users.Find(refreshToken.UserId);
             if (user == null)
             {
                 response.StatusCode = ResponseCode.NotFound;
@@ -406,7 +406,7 @@ namespace Infrastructure.Services.Auth
             var newAccessToken = GenerateJWT(user);
             refreshToken.Token = Guid.NewGuid().ToString();
             refreshToken.ExpiresAt = DateTime.UtcNow.AddDays(14);
-            clientDBContext.SaveChanges();
+            appDBContext.SaveChanges();
             response.StatusCode = ResponseCode.Success;
             response.ResponseMessage = "Tokens refreshed successfully.";
             response.Data = new AuthResult

@@ -17,7 +17,7 @@ using System.Text.Json;
 
 namespace Infrastructure.Services.User
 {
-    public class UserService(ClientDBContext clientDBContext, TokenService tokenService, IConfiguration config, IAmazonS3 s3Client, WasabiService wasabiService) : IUserService
+    public class UserService(AppDBContext appDBContext, TokenService tokenService, IConfiguration config, IAmazonS3 s3Client, WasabiService wasabiService) : IUserService
     {
         public ResponseVM GetUser()
         {
@@ -78,7 +78,7 @@ namespace Infrastructure.Services.User
                 return response;
             }
 
-            var existingUser = clientDBContext.Users.FirstOrDefault(u => u.Email == email);
+            var existingUser = appDBContext.Users.FirstOrDefault(u => u.Email == email);
             if (existingUser == null)
             {
                 response.StatusCode = ResponseCode.NotFound;
@@ -94,8 +94,8 @@ namespace Infrastructure.Services.User
                     return response;
                 }
                 existingUser.Password = Encryption.EncryptPassword(user.NewPassword);
-                clientDBContext.Users.Update(existingUser);
-                clientDBContext.SaveChanges();
+                appDBContext.Users.Update(existingUser);
+                appDBContext.SaveChanges();
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "Password updated successfully.";
                 response.Data = new
@@ -123,7 +123,7 @@ namespace Infrastructure.Services.User
                     response.ErrorMessage = "Invalid Token";
                     return response;
                 }
-                var existingUser = clientDBContext.Users.Find(tokenUserId);
+                var existingUser = appDBContext.Users.Find(tokenUserId);
                 if (existingUser == null)
                 {
                     response.StatusCode = ResponseCode.NotFound;
@@ -138,8 +138,8 @@ namespace Infrastructure.Services.User
                 existingUser.Gender = user.Gender;
                 existingUser.Level = user.Level;
                 existingUser.Theme = user.Theme ?? "light";
-                clientDBContext.Users.Update(existingUser);
-                clientDBContext.SaveChanges();
+                appDBContext.Users.Update(existingUser);
+                appDBContext.SaveChanges();
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "User updated successfully.";
                 response.Data = existingUser.ToUserDTO();
@@ -167,7 +167,7 @@ namespace Infrastructure.Services.User
                     return response;
                 }
 
-                var existingUser = clientDBContext.Users.Find(tokenUserId);
+                var existingUser = appDBContext.Users.Find(tokenUserId);
                 if (existingUser == null)
                 {
                     response.StatusCode = ResponseCode.NotFound;
@@ -175,8 +175,8 @@ namespace Infrastructure.Services.User
                     return response;
                 }
                 existingUser.IsDeleted = true;
-                clientDBContext.Users.Update(existingUser);
-                clientDBContext.SaveChanges();
+                appDBContext.Users.Update(existingUser);
+                appDBContext.SaveChanges();
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "User deleted successfully.";
             }
@@ -228,7 +228,7 @@ namespace Infrastructure.Services.User
                 Expires = DateTime.UtcNow.AddSeconds(int.Parse(config["WasabiSettings:URLExpirySeconds"]!))
             });
 
-            var user = clientDBContext.Users
+            var user = appDBContext.Users
                 .FirstOrDefault(s => s.UserID == tokenService.UserID && s.IsDeleted == false);
 
             if (user == null)
@@ -242,12 +242,12 @@ namespace Infrastructure.Services.User
             user.ImageKey = filename;
             user.ExpiresAt = DateTime.UtcNow.AddSeconds(int.Parse(config["WasabiSettings:URLExpirySeconds"]!));
 
-            clientDBContext.Users.Update(user);
-            await clientDBContext.SaveChangesAsync();
+            appDBContext.Users.Update(user);
+            await appDBContext.SaveChangesAsync();
 
             response.StatusCode = ResponseCode.Success;
             response.ResponseMessage = "User profile image saved to Wasabi.";
-            response.Data = new { ProfileImageUrl = signedUrl };
+            response.Data = user.ToUserDTO();
             return response;
         }
 
@@ -256,7 +256,7 @@ namespace Infrastructure.Services.User
             ResponseVM response = ResponseVM.Instance;
             string userId = tokenService.UserID.ToString();
 
-            var user = clientDBContext.Users
+            var user = appDBContext.Users
                 .FirstOrDefault(s => s.UserID.ToString() == userId && s.IsDeleted == false);
 
             if (user == null)
@@ -285,8 +285,8 @@ namespace Infrastructure.Services.User
                 user.ProfileImage = newSignedUrl;
                 user.ExpiresAt = DateTime.UtcNow.AddSeconds(int.Parse(config["WasabiSettings:URLExpirySeconds"]!));
 
-                clientDBContext.Users.Update(user);
-                clientDBContext.SaveChanges();
+                appDBContext.Users.Update(user);
+                appDBContext.SaveChanges();
             }
 
             response.StatusCode = ResponseCode.Success;
@@ -307,7 +307,7 @@ namespace Infrastructure.Services.User
                     response.ErrorMessage = "Invalid Token";
                     return response;
                 }
-                var existingUser = clientDBContext.Users.Find(tokenUserId);
+                var existingUser = appDBContext.Users.Find(tokenUserId);
                 if (existingUser == null)
                 {
                     response.StatusCode = ResponseCode.NotFound;
@@ -315,8 +315,8 @@ namespace Infrastructure.Services.User
                     return response;
                 }
                 existingUser.Languages = languages;
-                clientDBContext.Users.Update(existingUser);
-                clientDBContext.SaveChanges();
+                appDBContext.Users.Update(existingUser);
+                appDBContext.SaveChanges();
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "Languages updated successfully.";
                 response.Data = existingUser.ToUserDTO();
@@ -338,7 +338,7 @@ namespace Infrastructure.Services.User
                 Guid tokenUserId = tokenService.UserID;
                 if (tokenUserId != Guid.Empty)
                 {
-                    var existingUser = clientDBContext.Users.Find(tokenUserId);
+                    var existingUser = appDBContext.Users.Find(tokenUserId);
                     if (existingUser == null)
                     {
                         response.StatusCode = ResponseCode.NotFound;
@@ -346,8 +346,8 @@ namespace Infrastructure.Services.User
                         return response;
                     }
                     existingUser.Interests = interests;
-                    clientDBContext.Users.Update(existingUser);
-                    clientDBContext.SaveChanges();
+                    appDBContext.Users.Update(existingUser);
+                    appDBContext.SaveChanges();
                     response.StatusCode = ResponseCode.Success;
                     response.ResponseMessage = "Interests updated successfully.";
                     response.Data = existingUser.ToUserDTO();
@@ -377,7 +377,7 @@ namespace Infrastructure.Services.User
                     response.ErrorMessage = "Invalid Token";
                     return response;
                 }
-                var existingUser = clientDBContext.Users.Find(tokenUserId);
+                var existingUser = appDBContext.Users.Find(tokenUserId);
                 if (existingUser == null)
                 {
                     response.StatusCode = ResponseCode.NotFound;
@@ -385,8 +385,8 @@ namespace Infrastructure.Services.User
                     return response;
                 }
                 existingUser.Theme = theme;
-                clientDBContext.Users.Update(existingUser);
-                clientDBContext.SaveChanges();
+                appDBContext.Users.Update(existingUser);
+                appDBContext.SaveChanges();
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "Level updated successfully.";
                 response.Data = existingUser.ToUserDTO();
@@ -412,7 +412,7 @@ namespace Infrastructure.Services.User
                     response.ErrorMessage = "Invalid Token";
                     return response;
                 }
-                var existingUser = clientDBContext.Users.Find(tokenUserId);
+                var existingUser = appDBContext.Users.Find(tokenUserId);
                 if (existingUser == null)
                 {
                     response.StatusCode = ResponseCode.NotFound;
@@ -420,8 +420,8 @@ namespace Infrastructure.Services.User
                     return response;
                 }
                 existingUser.Level = level;
-                clientDBContext.Users.Update(existingUser);
-                clientDBContext.SaveChanges();
+                appDBContext.Users.Update(existingUser);
+                appDBContext.SaveChanges();
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "Level updated successfully.";
                 response.Data = existingUser.ToUserDTO();
@@ -441,7 +441,7 @@ namespace Infrastructure.Services.User
 
             var userId = tokenService.UserID; // implement this based on your auth
 
-            var user = await clientDBContext.Users.FindAsync(userId);
+            var user = await appDBContext.Users.FindAsync(userId);
             if (user == null)
             {
                 response.StatusCode = ResponseCode.NotFound;
@@ -453,19 +453,19 @@ namespace Infrastructure.Services.User
             if (!string.IsNullOrEmpty(base64Image))
             {
                 response = await SaveUserProfileImage(base64Image);
-                Console.WriteLine("response.Data: " + response.Data);
                 if (response.StatusCode != ResponseCode.Success) // image upload failed
                 {
                     return response; 
                 }
-                user.ProfileImage = response.Data?.ProfileImageUrl!;
+                user.ProfileImage = response.Data?.ProfileImage!;
             }
 
-            clientDBContext.Users.Update(user);
-            await clientDBContext.SaveChangesAsync();
+            appDBContext.Users.Update(user);
+            await appDBContext.SaveChangesAsync();
 
             response.StatusCode = ResponseCode.Success;
             response.ResponseMessage = "Profile updated successfully.";
+            response.Data = user.ToUserDTO() ;
             return response;
         }
     }
