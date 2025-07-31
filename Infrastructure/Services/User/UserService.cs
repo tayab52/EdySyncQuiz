@@ -30,7 +30,7 @@ namespace Infrastructure.Services.User
                 Guid tokenUserId = tokenService.UserID;
                 string tokenEmail = tokenService.Email;
 
-                if(tokenEmail == null && tokenUserId == null)
+                if (string.IsNullOrEmpty(tokenEmail) && tokenUserId == Guid.Empty)
                 {
                     response.StatusCode = ResponseCode.Unauthorized;
                     response.ErrorMessage = "Invalid Token";
@@ -45,7 +45,7 @@ namespace Infrastructure.Services.User
 
                 if (users == null || !users.Result.Any())
                 {
-                    response.StatusCode = ResponseCode.Unauthorized;
+                    response.StatusCode = ResponseCode.NotFound;
                     response.ErrorMessage = "User does not exist.";
                     return response;
                 }
@@ -77,6 +77,7 @@ namespace Infrastructure.Services.User
             {
                 response.StatusCode = ResponseCode.Unauthorized;
                 response.ErrorMessage = "Invalid Token";
+                return response;
             }
 
             var existingUser = clientDBContext.Users.FirstOrDefault(u => u.Email == email);
@@ -118,7 +119,7 @@ namespace Infrastructure.Services.User
             try
             {
                 Guid tokenUserId = tokenService.UserID;
-                if (tokenUserId == null)
+                if (tokenUserId == Guid.Empty)
                 {
                     response.StatusCode = ResponseCode.Unauthorized;
                     response.ErrorMessage = "Invalid Token";
@@ -161,7 +162,7 @@ namespace Infrastructure.Services.User
             {
                 Guid tokenUserId = tokenService.UserID;
 
-                if (tokenUserId == null)
+                if (tokenUserId == Guid.Empty)
                 {
                     response.StatusCode = ResponseCode.Unauthorized;
                     response.ErrorMessage = "Invalid Token";
@@ -301,7 +302,7 @@ namespace Infrastructure.Services.User
             try
             {
                 Guid tokenUserId = tokenService.UserID;
-                if (tokenUserId == null)
+                if (tokenUserId == Guid.Empty)
                 {
                     response.StatusCode = ResponseCode.Unauthorized;
                     response.ErrorMessage = "Invalid Token";
@@ -336,7 +337,7 @@ namespace Infrastructure.Services.User
             try
             {
                 Guid tokenUserId = tokenService.UserID;
-                if (tokenUserId != null)
+                if (tokenUserId != Guid.Empty)
                 {
                     var existingUser = clientDBContext.Users.Find(tokenUserId);
                     if (existingUser == null)
@@ -371,7 +372,7 @@ namespace Infrastructure.Services.User
             try
             {
                 Guid tokenUserId = tokenService.UserID;
-                if (tokenUserId == null)
+                if (tokenUserId == Guid.Empty)
                 {
                     response.StatusCode = ResponseCode.Unauthorized;
                     response.ErrorMessage = "Invalid Token";
@@ -406,7 +407,7 @@ namespace Infrastructure.Services.User
             try
             {
                 Guid tokenUserId = tokenService.UserID;
-                if (tokenUserId == null)
+                if (tokenUserId == Guid.Empty)
                 {
                     response.StatusCode = ResponseCode.Unauthorized;
                     response.ErrorMessage = "Invalid Token";
