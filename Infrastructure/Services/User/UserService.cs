@@ -27,7 +27,7 @@ namespace Infrastructure.Services.User
 
             try
             {
-                string tokenUserId = tokenService.UserID;
+                Guid tokenUserId = tokenService.UserID;
                 string tokenEmail = tokenService.Email;
 
                 if(tokenEmail == null && tokenUserId == null)
@@ -60,10 +60,10 @@ namespace Infrastructure.Services.User
                 response.ResponseMessage = "User fetched successfully.";
                 response.Data = userDTO;
             }
-            catch
+            catch(Exception e)
             {
                 response.StatusCode = ResponseCode.InternalServerError;
-                response.ErrorMessage = "An error occurred while retrieving the user.";
+                response.ErrorMessage = "An error occurred while retrieving the user." + e;
             }
 
             return response;
@@ -117,8 +117,8 @@ namespace Infrastructure.Services.User
             ResponseVM response = ResponseVM.Instance;
             try
             {
-                string tokenUserId = tokenService.UserID;
-                if (string.IsNullOrEmpty(tokenUserId))
+                Guid tokenUserId = tokenService.UserID;
+                if (tokenUserId == null)
                 {
                     response.StatusCode = ResponseCode.Unauthorized;
                     response.ErrorMessage = "Invalid Token";
@@ -159,9 +159,9 @@ namespace Infrastructure.Services.User
             ResponseVM response = ResponseVM.Instance;
             try
             {
-                string tokenUserId = tokenService.UserID;
+                Guid tokenUserId = tokenService.UserID;
 
-                if (string.IsNullOrEmpty(tokenUserId))
+                if (tokenUserId == null)
                 {
                     response.StatusCode = ResponseCode.Unauthorized;
                     response.ErrorMessage = "Invalid Token";
@@ -230,7 +230,7 @@ namespace Infrastructure.Services.User
             });
 
             var user = clientDBContext.Users
-                .FirstOrDefault(s => s.UserID.ToString() == tokenService.UserID && s.IsDeleted == false);
+                .FirstOrDefault(s => s.UserID == tokenService.UserID && s.IsDeleted == false);
 
             if (user == null)
             {
@@ -300,14 +300,14 @@ namespace Infrastructure.Services.User
             ResponseVM response = ResponseVM.Instance;
             try
             {
-                string tokenUserId = tokenService.UserID;
-                if (string.IsNullOrEmpty(tokenUserId))
+                Guid tokenUserId = tokenService.UserID;
+                if (tokenUserId == null)
                 {
                     response.StatusCode = ResponseCode.Unauthorized;
                     response.ErrorMessage = "Invalid Token";
                     return response;
                 }
-                var existingUser = clientDBContext.Users.Find(int.Parse(tokenUserId));
+                var existingUser = clientDBContext.Users.Find(tokenUserId);
                 if (existingUser == null)
                 {
                     response.StatusCode = ResponseCode.NotFound;
@@ -335,26 +335,26 @@ namespace Infrastructure.Services.User
             ResponseVM response = ResponseVM.Instance;
             try
             {
-                string tokenUserId = tokenService.UserID;
-                if (string.IsNullOrEmpty(tokenUserId))
+                Guid tokenUserId = tokenService.UserID;
+                if (tokenUserId != null)
                 {
-                    response.StatusCode = ResponseCode.Unauthorized;
-                    response.ErrorMessage = "Invalid Token";
+                    var existingUser = clientDBContext.Users.Find(tokenUserId);
+                    if (existingUser == null)
+                    {
+                        response.StatusCode = ResponseCode.NotFound;
+                        response.ErrorMessage = "User not found.";
+                        return response;
+                    }
+                    existingUser.Interests = interests;
+                    clientDBContext.Users.Update(existingUser);
+                    clientDBContext.SaveChanges();
+                    response.StatusCode = ResponseCode.Success;
+                    response.ResponseMessage = "Interests updated successfully.";
+                    response.Data = existingUser.ToUserDTO();
                     return response;
                 }
-                var existingUser = clientDBContext.Users.Find(int.Parse(tokenUserId));
-                if (existingUser == null)
-                {
-                    response.StatusCode = ResponseCode.NotFound;
-                    response.ErrorMessage = "User not found.";
-                    return response;
-                }
-                existingUser.Interests = interests;
-                clientDBContext.Users.Update(existingUser);
-                clientDBContext.SaveChanges();
-                response.StatusCode = ResponseCode.Success;
-                response.ResponseMessage = "Interests updated successfully.";
-                response.Data = existingUser.ToUserDTO();
+                response.StatusCode = ResponseCode.Unauthorized;
+                response.ErrorMessage = "Invalid Token";
                 return response;
             }
             catch (Exception ex)
@@ -370,14 +370,14 @@ namespace Infrastructure.Services.User
             ResponseVM response = ResponseVM.Instance;
             try
             {
-                string tokenUserId = tokenService.UserID;
-                if (string.IsNullOrEmpty(tokenUserId))
+                Guid tokenUserId = tokenService.UserID;
+                if (tokenUserId == null)
                 {
                     response.StatusCode = ResponseCode.Unauthorized;
                     response.ErrorMessage = "Invalid Token";
                     return response;
                 }
-                var existingUser = clientDBContext.Users.Find(int.Parse(tokenUserId));
+                var existingUser = clientDBContext.Users.Find(tokenUserId);
                 if (existingUser == null)
                 {
                     response.StatusCode = ResponseCode.NotFound;
@@ -405,14 +405,14 @@ namespace Infrastructure.Services.User
             ResponseVM response = ResponseVM.Instance;
             try
             {
-                string tokenUserId = tokenService.UserID;
-                if (string.IsNullOrEmpty(tokenUserId))
+                Guid tokenUserId = tokenService.UserID;
+                if (tokenUserId == null)
                 {
                     response.StatusCode = ResponseCode.Unauthorized;
                     response.ErrorMessage = "Invalid Token";
                     return response;
                 }
-                var existingUser = clientDBContext.Users.Find(int.Parse(tokenUserId));
+                var existingUser = clientDBContext.Users.Find(tokenUserId);
                 if (existingUser == null)
                 {
                     response.StatusCode = ResponseCode.NotFound;

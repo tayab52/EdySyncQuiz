@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Org.BouncyCastle.Utilities;
 using System.Diagnostics;
+using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 
@@ -12,7 +13,7 @@ namespace Infrastructure.Services.Gemini
         private readonly string ApiKey = config["Gemini:ApiKey"]!;
         private readonly string URI = config["Gemini:Endpoint"]!;
 
-        public async Task<string> GenerateQuizFromInterestsAsync(string interests, int level)
+        public async Task<string?> GenerateQuizFromInterestsAsync(string interests, int level)
         {
             string prompt = $@"
                     Create a quiz with 10 multiple choice questions based on the following topics: {interests}. Make sure to include questions from all the listed interests
@@ -40,49 +41,84 @@ namespace Infrastructure.Services.Gemini
                       ...
                     ]";
 
-            var requestBody = new GeminiRequest
+            //var requestBody = new GeminiRequest
+            //{
+            //    contents = new List<GeminiContent>
+            //    {
+            //        new()
+            //        {
+            //            parts = new List<GeminiPart>
+            //            {
+            //                new() { text = prompt }
+            //            }
+            //        }
+            //    },
+            //    generationConfig = new GeminiGenerationConfig
+            //    {
+            //        temperature = 0.2,
+            //        topK = 20,
+            //    }
+            //};
+
+            //var request = new HttpRequestMessage
+            //{
+            //    Method = HttpMethod.Post,
+            //    RequestUri = new Uri($"{URI}?key={ApiKey}"),
+            //    Content = new StringContent(System.Text.Json.JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json")
+            //};
+
+            //var sw = Stopwatch.StartNew();
+            //var response = await HttpClient.SendAsync(request);
+            //sw.Stop();
+            //Console.WriteLine($"Gemini API took {sw.ElapsedMilliseconds} ms");
+
+            //response.EnsureSuccessStatusCode();
+
+            //var json = await response.Content.ReadAsStringAsync();
+            //var root = JsonDocument.Parse(json);
+            //var text = root.RootElement
+            //               .GetProperty("candidates")[0]
+            //               .GetProperty("content")
+            //               .GetProperty("parts")[0]
+            //               .GetProperty("text")
+            //               .GetString();
+
+            //return text ?? string.Empty;
+            var body = new
             {
-                contents = new List<GeminiContent>
+                contents = new[]
                 {
-                    new()
+                    new
                     {
-                        parts = new List<GeminiPart>
+                        //role = "user",
+                        parts = new[]
                         {
-                            new() { text = prompt }
+                            new { text = prompt }
                         }
                     }
-                },
-                generationConfig = new GeminiGenerationConfig
-                {
-                    temperature = 0.2,
-                    topK = 20,
                 }
             };
 
-            var request = new HttpRequestMessage
-            {
-                Method = HttpMethod.Post,
-                RequestUri = new Uri($"{URI}?key={ApiKey}"),
-                Content = new StringContent(System.Text.Json.JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json")
-            };
+            var json = System.Text.Json.JsonSerializer.Serialize(body);
+            var contentPayload = new StringContent(json, Encoding.UTF8, "application/json");
 
-            var sw = Stopwatch.StartNew();
-            var response = await HttpClient.SendAsync(request);
-            sw.Stop();
-            Console.WriteLine($"Gemini API took {sw.ElapsedMilliseconds} ms");
+            var timeElapsed = Stopwatch.StartNew();
+            var resp = await HttpClient.PostAsync(URI, contentPayload);
+            timeElapsed.Stop();
+            Console.WriteLine($"Gemini API took {timeElapsed.ElapsedMilliseconds} ms");
 
-            response.EnsureSuccessStatusCode();
+            if (!resp.IsSuccessStatusCode)
+                return null;
 
-            var json = await response.Content.ReadAsStringAsync();
-            var root = JsonDocument.Parse(json);
-            var text = root.RootElement
-                           .GetProperty("candidates")[0]
-                           .GetProperty("content")
-                           .GetProperty("parts")[0]
-                           .GetProperty("text")
-                           .GetString();
+            var responseString = await resp.Content.ReadAsStringAsync();
 
-            return text ?? string.Empty;
+            using var doc = JsonDocument.Parse(responseString);
+            var parts = doc.RootElement
+                .GetProperty("candidates")[0]
+                .GetProperty("content")
+                .GetProperty("parts");
+            var response = parts[0].GetProperty("text").GetString();
+            return response;
         }
 
         public class GeminiRequest

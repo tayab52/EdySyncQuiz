@@ -19,12 +19,14 @@ namespace PresentationAPI.Controllers.Quiz
             //var s = Stopwatch.StartNew();
 
             //var sw = Stopwatch.StartNew();
-            string userID = tokenService.UserID;
+            Guid userID = tokenService.UserID;
             //sw.Stop();
             //Console.WriteLine($"Token service took {sw.ElapsedMilliseconds} ms");
             
             //var sw2 = Stopwatch.StartNew();
-            var user = clientDBContext.Users.Find(int.Parse(userID));
+            var user = clientDBContext.Users.Find(userID);
+            Console.WriteLine("User ID: " + userID);
+            Console.WriteLine("User: " + System.Text.Json.JsonSerializer.Serialize(user));
             //sw2.Stop();
             //Console.WriteLine($"DB Operation took {sw2.ElapsedMilliseconds} ms");
 
@@ -32,6 +34,7 @@ namespace PresentationAPI.Controllers.Quiz
                 return BadRequest("User or interests not found");
 
             var quizJson = await quizService.GenerateQuizFromInterestsAsync(user.Interests, (int)user.Level!);
+            Console.WriteLine("Json: " + quizJson);
             //s.Stop();
             //Console.WriteLine($"Total Time took {s.ElapsedMilliseconds} ms");
             return Ok(quizJson);

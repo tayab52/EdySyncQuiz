@@ -5,7 +5,7 @@ namespace Infrastructure.Services.Token
 {
     public class TokenService
     {
-        public string UserID = "";
+        public Guid UserID;
         public string Email = "";
 
         public TokenService(IHttpContextAccessor httpContextAccessor)
@@ -18,7 +18,7 @@ namespace Infrastructure.Services.Token
                     IEnumerable<Claim> claims = identity.Claims;
                     if (claims.Any())
                     {
-                        UserID = user.FindFirst(ClaimTypes.NameIdentifier)?.Value!;
+                        UserID = Guid.Parse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
                         Email = user.FindFirst(ClaimTypes.Email)?.Value!;
                     }
                 }

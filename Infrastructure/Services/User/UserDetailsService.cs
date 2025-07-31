@@ -12,41 +12,41 @@ namespace Infrastructure.Services.User
         public ResponseVM SaveUserDetails(UserDetailsVM userDetails)
         {
             ResponseVM response = ResponseVM.Instance;
-            string userID = tokenService?.UserID ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(userID))
+            Guid userID = tokenService.UserID;
+            if (userID != null)
             {
-                response.StatusCode = 401;
-                response.ResponseMessage = "Unauthorized: User ID is required";
-                return response;
+                var user = clientDBContext.Users.FirstOrDefault(u => u.UserID == userID);
+                if (user == null)
+                {
+                    response.StatusCode = 404;
+                    response.ResponseMessage = "User not found";
+                    return response;
+                }
+                try
+                {
+                    user.DateOfBirth = userDetails.DateOfBirth;
+                    user.Gender = userDetails.Gender;
+                    user.Languages = userDetails.Languages;
+                    user.Level = userDetails.Level;
+                    user.Interests = userDetails.Interests;
+                    user.IsDataSubmitted = true;
+                    clientDBContext.Users.Update(user);
+                    clientDBContext.SaveChanges();
+                    response.StatusCode = 200;
+                    response.ResponseMessage = "User Details Updated Successfully";
+                    response.Data = user.ToUserDTO();
+                    return response;
+                }
+                catch
+                {
+                    response.StatusCode = 400;
+                    response.ErrorMessage = "Failed to Save Changes";
+                    return response;
+                }
             }
-            var user = clientDBContext.Users.FirstOrDefault(u => u.UserID.ToString() == userID);
-            if (user == null)
-            {
-                response.StatusCode = 404;
-                response.ResponseMessage = "User not found";
-                return response;
-            }
-            try
-            {
-                user.DateOfBirth = userDetails.DateOfBirth;
-                user.Gender = userDetails.Gender;
-                user.Languages = userDetails.Languages;
-                user.Level = userDetails.Level;
-                user.Interests = userDetails.Interests;
-                user.IsDataSubmitted = true;
-                clientDBContext.Users.Update(user);
-                clientDBContext.SaveChanges();
-                response.StatusCode = 200;
-                response.ResponseMessage = "User Details Updated Successfully";
-                response.Data = user.ToUserDTO();
-                return response;
-            }
-            catch
-            {
-                response.StatusCode = 400;
-                response.ErrorMessage = "Failed to Save Changes";
-                return response;
-            }
+            response.StatusCode = 401;
+            response.ResponseMessage = "Unauthorized: User ID is required";
+            return response;
         }
     }
 }
