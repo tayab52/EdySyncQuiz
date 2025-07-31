@@ -10,7 +10,6 @@ namespace PresentationAPI.Controllers.Language
     public class LanguageController : Controller
     {
         [HttpGet]
-        [HttpGet]
         public IActionResult GetLanguages()
         {
             ResponseVM response = ResponseVM.Instance;
@@ -30,6 +29,5 @@ namespace PresentationAPI.Controllers.Language
 
             return Ok(response);
         }
-
     }
 }

@@ -39,7 +39,7 @@ namespace Application.Mappers
         {
             return new User
             {
-                UserID = (int)user.UserID!,
+                UserID = (Guid)user.UserID!,
                 Username = user.Username!,
                 Email = user.Email!,
                 IsActive = (bool)user.IsActive!,

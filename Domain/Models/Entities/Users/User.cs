@@ -7,7 +7,7 @@ namespace Domain.Models.Entities.Users
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int UserID { get; set; }
+        public Guid UserID { get; set; }
 
         [Required]
         [MaxLength(50)]

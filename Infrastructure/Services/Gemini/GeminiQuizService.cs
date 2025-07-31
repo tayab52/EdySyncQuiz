@@ -1,5 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
-using System;
+using Org.BouncyCastle.Utilities;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
@@ -12,11 +12,19 @@ namespace Infrastructure.Services.Gemini
         private readonly string ApiKey = config["Gemini:ApiKey"]!;
         private readonly string URI = config["Gemini:Endpoint"]!;
 
-        public async Task<string> GenerateQuizFromInterestsAsync(string interests)
+        public async Task<string> GenerateQuizFromInterestsAsync(string interests, int level)
         {
             string prompt = $@"
                     Create a quiz with 10 multiple choice questions based on the following topics: {interests}. Make sure to include questions from all the listed interests
                     and if there are more than 10 interests, choose randomnly. Shuffle the questions as well.
+                    The quiz should be suitable for a level {level} audience.
+                    
+                    Difficulty levels:
+                    - Level 0: Entry Level, beginnner knowledge 
+                    - Level 1: Basic Level, simple concepts
+                    - Level 2: Middle Level, intermediate knowledge
+                    - Level 3: Top Level, advanced concepts
+
                     Each question should have:
                     - A question statement
                     - Four options labeled A, B, C, D
@@ -46,12 +54,10 @@ namespace Infrastructure.Services.Gemini
                 },
                 generationConfig = new GeminiGenerationConfig
                 {
-                    temperature = 0.0,
+                    temperature = 0.2,
                     topK = 20,
-                    //maxOutputTokens = 400  /
                 }
             };
-
 
             var request = new HttpRequestMessage
             {
@@ -60,12 +66,7 @@ namespace Infrastructure.Services.Gemini
                 Content = new StringContent(System.Text.Json.JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json")
             };
 
-            //Console.WriteLine(requestBody);
-
-            //var response = await HttpClient.SendAsync(request);
-            //Console.WriteLine("Res: " + response);
             var sw = Stopwatch.StartNew();
-            // API call
             var response = await HttpClient.SendAsync(request);
             sw.Stop();
             Console.WriteLine($"Gemini API took {sw.ElapsedMilliseconds} ms");

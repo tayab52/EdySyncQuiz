@@ -20,11 +20,14 @@ namespace PresentationAPI.Controllers.Auth
         [HttpPost("SignUp")]
         public IActionResult SignUp(RegisterUserVM user) // Requires Username, Email, Password
         { // user can sign up with username, email, and password
+            ResponseVM response = ResponseVM.Instance;
             if (user == null)
             {
-                return BadRequest("User data is required.");
+                response.StatusCode = ResponseCode.BadRequest;
+                response.ErrorMessage = "User data is required";
+                return BadRequest(response);
             }
-            ResponseVM response = authService.SignUp(user);
+            response = authService.SignUp(user);
             if (response.StatusCode == ResponseCode.Success)
             {
                 return Ok(response);
