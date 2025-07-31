@@ -11,6 +11,7 @@ using Dapper;
 using Infrastructure.Context;
 using Infrastructure.Services.Token;
 using Infrastructure.Services.Wasabi;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System.Text.Json;
 
@@ -246,6 +247,7 @@ namespace Infrastructure.Services.User
 
             response.StatusCode = ResponseCode.Success;
             response.ResponseMessage = "User profile image saved to Wasabi.";
+            response.Data = new { ProfileImageUrl = signedUrl };
             return response;
         }
 
@@ -431,6 +433,40 @@ namespace Infrastructure.Services.User
                 response.ErrorMessage = "Failed to update user: " + ex.Message;
                 return response;
             }
+        }
+
+        public async Task<ResponseVM> UpdateUserProfile(string? username, string? base64Image)
+        {
+            ResponseVM response = ResponseVM.Instance;
+
+            var userId = tokenService.UserID; // implement this based on your auth
+
+            var user = await clientDBContext.Users.FindAsync(userId);
+            if (user == null)
+            {
+                response.StatusCode = ResponseCode.NotFound;
+                response.ErrorMessage = "User not found.";
+                return response;
+            }
+
+            if(!string.IsNullOrEmpty(username)) user.Username = username;
+            if (!string.IsNullOrEmpty(base64Image))
+            {
+                response = await SaveUserProfileImage(base64Image);
+                Console.WriteLine("response.Data: " + response.Data);
+                if (response.StatusCode != ResponseCode.Success) // image upload failed
+                {
+                    return response; 
+                }
+                user.ProfileImage = response.Data?.ProfileImageUrl!;
+            }
+
+            clientDBContext.Users.Update(user);
+            await clientDBContext.SaveChangesAsync();
+
+            response.StatusCode = ResponseCode.Success;
+            response.ResponseMessage = "Profile updated successfully.";
+            return response;
         }
     }
 }

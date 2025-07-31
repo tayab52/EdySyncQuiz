@@ -176,7 +176,38 @@ namespace PresentationAPI.Controllers.User
             return BadRequest(response);
         }
 
-        [HttpPut("update-user-profile")]
+        [HttpPatch("update-user-profile")]
+        public async Task<IActionResult> UpdateUserProfile([FromForm] UpdateUserProfileVM userDetails)
+        {
+            ResponseVM response = ResponseVM.Instance;
+
+            if (userDetails == null)
+            {
+                response.StatusCode = ResponseCode.BadRequest;
+                response.ErrorMessage = "Username or Profile Image are required to Update Profile.";
+                return BadRequest(response);
+            }
+
+            // Convert image to Base64 if present
+            string? base64Image = null;
+            if (userDetails.Image != null && userDetails.Image.Length > 0)
+            {
+                using var memoryStream = new MemoryStream();
+                await userDetails.Image.CopyToAsync(memoryStream);
+                byte[] imageBytes = memoryStream.ToArray();
+                base64Image = Convert.ToBase64String(imageBytes);
+            }
+
+            response = await userService.UpdateUserProfile(userDetails.Username, base64Image);
+
+            if (response.StatusCode == ResponseCode.Success)
+                return Ok(response);
+
+            return BadRequest(response);
+        }
+
+
+        [HttpPut("update-user")]
         public IActionResult UpdateUser(UserDTO user) // Requires UserDTO
         { // User must be logged in, and can only update their own account details. updates whole user details
             ResponseVM response = ResponseVM.Instance;

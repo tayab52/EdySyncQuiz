@@ -15,5 +15,6 @@ namespace Application.Interfaces.User
         ResponseVM UpdateUserLevel(int level);
         ResponseVM UpdateTheme(string theme);
         Task<ResponseVM> SaveUserProfileImage(string base64Image);
+        Task<ResponseVM> UpdateUserProfile(string username, string? base64Image);
     }
 }
