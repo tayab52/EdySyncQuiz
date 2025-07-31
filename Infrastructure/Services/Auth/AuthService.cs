@@ -1,4 +1,5 @@
 ﻿using Application.DataTransferModels.ResponseModel;
+using Application.DataTransferModels.TokenVM;
 using Application.DataTransferModels.UserViewModels;
 using Application.Interfaces.Auth;
 using Application.Mappers;
@@ -9,16 +10,13 @@ using Dapper;
 using Domain.Models.Entities.Token;
 using Infrastructure.Context;
 using MailKit.Security;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using MimeKit;
-using Org.BouncyCastle.Bcpg;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
-using Application.DataTransferModels.TokenVM;
 
 namespace Infrastructure.Services.Auth
 {
@@ -198,6 +196,7 @@ namespace Infrastructure.Services.Auth
             var claims = new List<Claim>
             {
                 new("sub", user.UserID.ToString()),
+                new(ClaimTypes.NameIdentifier, user.UserID.ToString()),
                 new(ClaimTypes.Email, user.Email),
                 new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
@@ -350,11 +349,6 @@ namespace Infrastructure.Services.Auth
                 message.To.Add(new MailboxAddress("Recipient", toEmail));
                 message.Subject = subject;
 
-
-                //message.Body = new TextPart("html")
-                //{
-                //    Text = body
-                //};
                 message.Body = new TextPart("plain")
                 {
                     Text = body

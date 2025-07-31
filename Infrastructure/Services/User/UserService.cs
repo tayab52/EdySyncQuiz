@@ -2,18 +2,15 @@
 using Amazon.S3.Model;
 using Application.DataTransferModels.ResponseModel;
 using Application.DataTransferModels.UserViewModels;
-using Application.Interfaces.Auth;
 using Application.Interfaces.User;
 using Application.Mappers;
 using CommonOperations.Constants;
 using CommonOperations.Encryption;
 using CommonOperations.Methods;
 using Dapper;
-using Domain.Models.Entities.Users;
 using Infrastructure.Context;
 using Infrastructure.Services.Token;
 using Infrastructure.Services.Wasabi;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System.Text.Json;
 
@@ -60,7 +57,7 @@ namespace Infrastructure.Services.User
                 response.ResponseMessage = "User fetched successfully.";
                 response.Data = userDTO;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 response.StatusCode = ResponseCode.InternalServerError;
                 response.ErrorMessage = "An error occurred while retrieving the user." + e;
@@ -73,7 +70,7 @@ namespace Infrastructure.Services.User
         {
             ResponseVM response = ResponseVM.Instance;
             string? email = tokenService?.Email;
-            if(email == null)
+            if (email == null)
             {
                 response.StatusCode = ResponseCode.Unauthorized;
                 response.ErrorMessage = "Invalid Token";

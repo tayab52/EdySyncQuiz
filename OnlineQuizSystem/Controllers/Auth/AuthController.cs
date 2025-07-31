@@ -2,13 +2,8 @@
 using Application.DataTransferModels.TokenVM;
 using Application.DataTransferModels.UserViewModels;
 using Application.Interfaces.Auth;
-using Application.Interfaces.User;
 using CommonOperations.Constants;
-using Domain.Models.Entities.Token;
-using Infrastructure.Context;
-using Infrastructure.Services.User;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace PresentationAPI.Controllers.Auth
 {
@@ -150,7 +145,7 @@ namespace PresentationAPI.Controllers.Auth
         }
 
         // /api/auth/refresh
-        [HttpPost("Refresh")]
+        [HttpPost("refresh")]
         public IActionResult Refresh(TokenRequestVM request) // Requires Refresh Token to generate new access token
         { // user can refresh their access token by providing their refresh token
             ResponseVM response = ResponseVM.Instance;

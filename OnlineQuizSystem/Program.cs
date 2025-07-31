@@ -1,4 +1,3 @@
-using Amazon.S3;
 using Application.DataTransferModels.ResponseModel;
 using CommonOperations.Constants;
 using Infrastructure.Context;
@@ -33,49 +32,13 @@ namespace PresentationAPI
                     {
                         ValidateIssuer = true,
                         ValidateAudience = true,
-                        ValidateLifetime = true,
                         ValidateIssuerSigningKey = true,
                         ValidIssuer = builder.Configuration["Jwt:ValidIssuer"],
                         ValidAudience = builder.Configuration["Jwt:ValidAudience"],
                         IssuerSigningKey = signingKey,
                         TokenDecryptionKey = encryptionKey,
+                        ValidateLifetime = false, // disable default lifetime validation so middleware can read claims
                         ClockSkew = TimeSpan.Zero // disables the default 5-minute clock skew
-                    };
-
-                    options.Events = new JwtBearerEvents
-                    {
-                        OnAuthenticationFailed = context =>
-                        {
-                            var path = context.HttpContext.Request.Path.Value;
-
-                            string[] excludedPaths = [
-                                "/api/auth/SignIn",
-                                "/api/auth/SignUp",
-                                "/api/auth/Verify-OTP",
-                                "/api/auth/Resend-OTP",
-                                "/api/auth/Forgot-Password",
-                                "/api/auth/Reset-Password",
-                                "/api/auth/Refresh",
-                                "/api/language"
-                            ];
-
-                            if (excludedPaths.Any(p => path!.Equals(p, StringComparison.OrdinalIgnoreCase)))
-                            {
-                                return Task.CompletedTask;
-                            }
-
-                            if (context.Exception is SecurityTokenExpiredException)
-                            {
-                                ResponseVM response = ResponseVM.Instance;
-                                response.StatusCode = ResponseCode.ProxyAuthenticationRequired;
-                                response.ErrorMessage = "Your session has expired. Please login again.";
-                                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                                context.Response.ContentType = "application/json";
-                                return context.Response.WriteAsJsonAsync(response);
-                            }
-
-                            return Task.CompletedTask;
-                        }
                     };
                 });
 
@@ -92,7 +55,7 @@ namespace PresentationAPI
                 {
                     Name = "Authorization",
                     Type = SecuritySchemeType.Http,
-                    Scheme = "bearer", 
+                    Scheme = "bearer",
                     BearerFormat = "JWT",
                     In = ParameterLocation.Header,
                     Description = "Enter your JWT token here."
@@ -108,7 +71,7 @@ namespace PresentationAPI
                                 Type = ReferenceType.SecurityScheme,
                                 Id = "Bearer"
                             },
-                            Scheme = "bearer",  
+                            Scheme = "bearer",
                             Name = "Authorization",
                             In = ParameterLocation.Header
                         },
@@ -147,6 +110,9 @@ namespace PresentationAPI
             app.UseMiddleware<ErrorHandlingMiddleware>();
 
             app.UseAuthentication();
+
+            app.UseMiddleware<AuthMiddleware>();
+
             app.UseAuthorization();
 
             app.MapControllers();

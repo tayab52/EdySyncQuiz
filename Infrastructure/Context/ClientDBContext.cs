@@ -1,8 +1,8 @@
-﻿using Domain.Models.Entities.Users;
+﻿using Domain.Models.Entities.Token;
+using Domain.Models.Entities.Users;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Domain.Models.Entities.Token;
 
 namespace Infrastructure.Context
 {

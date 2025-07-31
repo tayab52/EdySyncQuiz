@@ -13,13 +13,13 @@ namespace Infrastructure.Services.User
         {
             ResponseVM response = ResponseVM.Instance;
             Guid userID = tokenService.UserID;
-            if (userID != null)
+            if (userID != Guid.Empty)
             {
                 var user = clientDBContext.Users.FirstOrDefault(u => u.UserID == userID);
                 if (user == null)
                 {
                     response.StatusCode = 404;
-                    response.ResponseMessage = "User not found";
+                    response.ErrorMessage = "User not found";
                     return response;
                 }
                 try

@@ -5,14 +5,12 @@ using Infrastructure.Services.Gemini;
 using Infrastructure.Services.Token;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Diagnostics;
 
 namespace PresentationAPI.Controllers.Quiz
 {
     [ApiController]
     [Route("api/quiz")]
-    [Authorize] 
+    [Authorize]
     public class QuizController(ClientDBContext clientDBContext, TokenService tokenService, GeminiQuizService quizService) : Controller
     {
         [HttpGet("generate-quiz")]

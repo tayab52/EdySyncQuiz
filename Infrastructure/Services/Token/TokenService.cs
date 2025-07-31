@@ -7,6 +7,7 @@ namespace Infrastructure.Services.Token
     {
         public Guid UserID;
         public string Email = "";
+        public bool IsAccessTokenExpired = true;
 
         public TokenService(IHttpContextAccessor httpContextAccessor)
         {
@@ -20,6 +21,12 @@ namespace Infrastructure.Services.Token
                     {
                         UserID = Guid.Parse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
                         Email = user.FindFirst(ClaimTypes.Email)?.Value!;
+                        var expClaim = user.FindFirst("exp")?.Value;
+                        if (long.TryParse(expClaim, out var expUnix))
+                        {
+                            var expiryDate = DateTimeOffset.FromUnixTimeSeconds(expUnix).UtcDateTime;
+                            IsAccessTokenExpired = expiryDate < DateTime.UtcNow;
+                        }
                     }
                 }
             }

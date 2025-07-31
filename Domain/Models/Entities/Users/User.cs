@@ -60,7 +60,7 @@ namespace Domain.Models.Entities.Users
 
         public string? Languages { get; set; } = string.Empty;
 
-        public string? Theme { get; set; } = "light"; 
+        public string? Theme { get; set; } = "light";
 
         public int? Level { get; set; } = 0; // Entry Level (Defined in CommonOperations)
     }

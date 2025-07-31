@@ -1,5 +1,4 @@
 ﻿using Application.DataTransferModels.UserViewModels;
-using Domain.Models.Entities.Token;
 using Domain.Models.Entities.Users;
 
 namespace Application.Mappers

@@ -1,5 +1,4 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -33,7 +32,7 @@ namespace Infrastructure.Migrations
                 table: "RefreshTokens",
                 type: "uniqueidentifier",
                 nullable: false,
-                defaultValue: Guid.Empty); 
+                defaultValue: Guid.Empty);
 
             migrationBuilder.CreateIndex(
                 name: "IX_RefreshTokens_UserId",
