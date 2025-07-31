@@ -41,56 +41,13 @@ namespace Infrastructure.Services.Gemini
                       ...
                     ]";
 
-            //var requestBody = new GeminiRequest
-            //{
-            //    contents = new List<GeminiContent>
-            //    {
-            //        new()
-            //        {
-            //            parts = new List<GeminiPart>
-            //            {
-            //                new() { text = prompt }
-            //            }
-            //        }
-            //    },
-            //    generationConfig = new GeminiGenerationConfig
-            //    {
-            //        temperature = 0.2,
-            //        topK = 20,
-            //    }
-            //};
-
-            //var request = new HttpRequestMessage
-            //{
-            //    Method = HttpMethod.Post,
-            //    RequestUri = new Uri($"{URI}?key={ApiKey}"),
-            //    Content = new StringContent(System.Text.Json.JsonSerializer.Serialize(requestBody), Encoding.UTF8, "application/json")
-            //};
-
-            //var sw = Stopwatch.StartNew();
-            //var response = await HttpClient.SendAsync(request);
-            //sw.Stop();
-            //Console.WriteLine($"Gemini API took {sw.ElapsedMilliseconds} ms");
-
-            //response.EnsureSuccessStatusCode();
-
-            //var json = await response.Content.ReadAsStringAsync();
-            //var root = JsonDocument.Parse(json);
-            //var text = root.RootElement
-            //               .GetProperty("candidates")[0]
-            //               .GetProperty("content")
-            //               .GetProperty("parts")[0]
-            //               .GetProperty("text")
-            //               .GetString();
-
-            //return text ?? string.Empty;
             var body = new
             {
                 contents = new[]
                 {
                     new
                     {
-                        //role = "user",
+                        role = "user",
                         parts = new[]
                         {
                             new { text = prompt }
@@ -103,9 +60,11 @@ namespace Infrastructure.Services.Gemini
             var contentPayload = new StringContent(json, Encoding.UTF8, "application/json");
 
             var timeElapsed = Stopwatch.StartNew();
-            var resp = await HttpClient.PostAsync(URI, contentPayload);
+
+            var endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={ApiKey}";
+            var resp = await HttpClient.PostAsync(endpoint, contentPayload);
             timeElapsed.Stop();
-            Console.WriteLine($"Gemini API took {timeElapsed.ElapsedMilliseconds} ms");
+            Console.WriteLine("Time Elapsed: " + timeElapsed.ElapsedMilliseconds);
 
             if (!resp.IsSuccessStatusCode)
                 return null;
