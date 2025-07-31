@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace PresentationAPI.Controllers.Language
 {
-    [Route("api/[controller]")]
+    [Route("api/language")]
     [ApiController]
     public class LanguageController : Controller
     {
