@@ -9,17 +9,14 @@ namespace Domain.Models.Entities.Users
         public Guid UserID { get; set; }
 
         [Required]
-        [MaxLength(50)]
         [Column(TypeName = "nvarchar(50)")]
         public string Username { get; set; } = string.Empty;
 
         [Required]
-        [MaxLength(100)]
         [Column(TypeName = "nvarchar(100)")]
         public string Email { get; set; } = string.Empty;
 
         [Required]
-        [MaxLength(255)]
         [Column(TypeName = "nvarchar(255)")]
         public string Password { get; set; } = string.Empty;
 
@@ -30,7 +27,6 @@ namespace Domain.Models.Entities.Users
         [Required]
         [Column(TypeName = "bit")]
         public bool IsDeleted { get; set; } = false;
-
 
         [Column(TypeName = "bit")]
         public bool IsDataSubmitted { get; set; } = false;

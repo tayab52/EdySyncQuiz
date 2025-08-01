@@ -9,7 +9,7 @@ namespace Domain.Models.Entities.Questions
         [Key]
         public Guid QuestionID { get; set; }
 
-        [Column(TypeName = "nvarchar(500)")]
+        [Column(TypeName = "nvarchar(501)")]
         [Required]
         public string QuestionText { get; set; } = string.Empty;
 
@@ -28,8 +28,5 @@ namespace Domain.Models.Entities.Questions
         [Column("CorrectAnswerOption")]
         [Required]
         public string CorrectAnswerOption { get; set; } = string.Empty; // ('A', 'B', 'C', or 'D')
-
-        [ForeignKey("UserTest")]
-        public int UserTestID { get; set; }
     }
 }

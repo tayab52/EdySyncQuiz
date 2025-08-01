@@ -1,4 +1,7 @@
-﻿using Domain.Models.Entities.Token;
+﻿using Domain.Models.Entities.Answers;
+using Domain.Models.Entities.Questions;
+using Domain.Models.Entities.Tests;
+using Domain.Models.Entities.Token;
 using Domain.Models.Entities.Users;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -29,10 +32,8 @@ namespace Infrastructure.Context
 
         public DbSet<User> Users { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
-        //public DbSet<UserTest> UserTests { get; set; }
-        //public DbSet<UserInterest> UserInterests { get; set; }
-        //public DbSet<UserAnswer> UserAnswers { get; set; }
-        //public DbSet<Question> Questions { get; set; }
-        //public DbSet<TestCategory> TestCategories { get; set; }
+        public DbSet<Question> Questions { get; set; }
+        public DbSet<UserAnswer> UserAnswers { get; set; }
+        public DbSet<UserTest> UserTests { get; set; }
     }
 }

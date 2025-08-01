@@ -1,10 +1,14 @@
-﻿using Application.DataTransferModels.ResponseModel;
+﻿using Application.DataTransferModels.Quiz;
+using Application.DataTransferModels.ResponseModel;
 using CommonOperations.Constants;
+using Domain.Models.Entities.Questions;
 using Infrastructure.Context;
 using Infrastructure.Services.Gemini;
 using Infrastructure.Services.Token;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace PresentationAPI.Controllers.Quiz
 {
@@ -26,7 +30,21 @@ namespace PresentationAPI.Controllers.Quiz
                 return BadRequest(response);
             }
             var quizJson = await quizService.GenerateQuizFromInterestsAsync(user.Interests, (int)user.Level!);
-            Console.WriteLine("Quiz JSON: " + quizJson);
+            Console.WriteLine("Raw Quiz JSON:\n" + quizJson);
+            var quizDTOs = JsonSerializer.Deserialize<List<QuizQuestionDTO>>(quizJson.Trim().Trim('`').Substring(4).Trim());
+            Console.WriteLine("Quiz DTOs: " + JsonSerializer.Serialize(quizDTOs));
+            List<Question> questions = quizDTOs.Select(dto => new Question
+            {
+                QuestionID = Guid.NewGuid(),
+                QuestionText = dto.Question,
+                OptionA = dto.Options["A"],
+                OptionB = dto.Options["B"],
+                OptionC = dto.Options["C"],
+                OptionD = dto.Options["D"],
+                CorrectAnswerOption = dto.Answer,
+            }).ToList();
+            //appDBContext.Questions.AddRange(questions);
+            //await _dbContext.SaveChangesAsync();
             return Ok(quizJson);
         }
     }

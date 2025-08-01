@@ -205,7 +205,7 @@ namespace Infrastructure.Services.Auth
                 Subject = new ClaimsIdentity(claims),
                 Issuer = config["JWT:ValidIssuer"],
                 Audience = config["JWT:ValidAudience"],
-                Expires = DateTime.UtcNow.AddMinutes(1),
+                Expires = DateTime.UtcNow.AddDays(7),
                 SigningCredentials = new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256),
 
                 EncryptingCredentials = new EncryptingCredentials(

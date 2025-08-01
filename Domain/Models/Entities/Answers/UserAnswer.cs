@@ -13,10 +13,10 @@ namespace Domain.Models.Entities.Answers
         public Guid UserID { get; set; }
 
         [ForeignKey("Question")]
-        public int QuestionID { get; set; }
+        public Guid QuestionID { get; set; }
 
         [ForeignKey("UserTest")]
-        public int UserTestID { get; set; }
+        public Guid UserTestID { get; set; }
 
         [Column(TypeName = "nvarchar(1)")]
         public string? SelectedAnswerOption { get; set; } = string.Empty; // ('A', 'B', 'C', 'D', or null if skipped)
