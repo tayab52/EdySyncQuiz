@@ -13,20 +13,7 @@ namespace Domain.Models.Entities.Questions
         [Required]
         public string QuestionText { get; set; } = string.Empty;
 
-        [Column("OptionA")]
-        public string OptionA { get; set; } = string.Empty;
-
-        [Column("OptionB")]
-        public string OptionB { get; set; } = string.Empty;
-
-        [Column("OptionC")]
-        public string OptionC { get; set; } = string.Empty;
-
-        [Column("OptionD")]
-        public string OptionD { get; set; } = string.Empty;
-
-        [Column("CorrectAnswerOption")]
-        [Required]
-        public string CorrectAnswerOption { get; set; } = string.Empty; // ('A', 'B', 'C', or 'D')
+        [ForeignKey("Quiz")]
+        public Guid QuizID { get; set; }
     }
 }

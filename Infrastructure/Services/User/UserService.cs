@@ -272,7 +272,7 @@ namespace Infrastructure.Services.User
                 return response;
             }
 
-            if (user.ExpiresAt <= DateTime.UtcNow.AddDays(7)) // check if url has expired or about to expire
+            if (user.ExpiresAt <= DateTime.UtcNow.AddMinutes(1)) // check if url has expired or about to expire
             {
                 string newSignedUrl = s3Client.GetPreSignedURL(new GetPreSignedUrlRequest
                 {

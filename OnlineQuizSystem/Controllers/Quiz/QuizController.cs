@@ -37,11 +37,11 @@ namespace PresentationAPI.Controllers.Quiz
             {
                 QuestionID = Guid.NewGuid(),
                 QuestionText = dto.Question,
-                OptionA = dto.Options["A"],
-                OptionB = dto.Options["B"],
-                OptionC = dto.Options["C"],
-                OptionD = dto.Options["D"],
-                CorrectAnswerOption = dto.Answer,
+                //OptionA = dto.Options["A"],
+                //OptionB = dto.Options["B"],
+                //OptionC = dto.Options["C"],
+                //OptionD = dto.Options["D"],
+                //CorrectAnswerOption = dto.Answer,
             }).ToList();
             //appDBContext.Questions.AddRange(questions);
             //await _dbContext.SaveChangesAsync();

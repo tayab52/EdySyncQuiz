@@ -1,8 +1,9 @@
 ﻿using Domain.Models.Entities.Answers;
 using Domain.Models.Entities.Questions;
-using Domain.Models.Entities.Tests;
+using Domain.Models.Entities.Quiz;
 using Domain.Models.Entities.Token;
 using Domain.Models.Entities.Users;
+using Domain.Models.Entities.Options;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -32,8 +33,9 @@ namespace Infrastructure.Context
 
         public DbSet<User> Users { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<Quiz> Quizzes { get; set; }
         public DbSet<Question> Questions { get; set; }
-        public DbSet<UserAnswer> UserAnswers { get; set; }
-        public DbSet<UserTest> UserTests { get; set; }
+        public DbSet<Option> Options { get; set; }
+        public DbSet<Answer> Answers { get; set; }
     }
 }
