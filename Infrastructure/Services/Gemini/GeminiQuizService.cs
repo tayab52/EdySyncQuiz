@@ -3,6 +3,8 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 
+using System.Text.Json.Serialization;
+
 namespace Infrastructure.Services.Gemini
 {
     public class GeminiQuizService(IConfiguration config)
@@ -11,30 +13,31 @@ namespace Infrastructure.Services.Gemini
         private readonly string ApiKey = config["Gemini:ApiKey"]!;
         private readonly string URI = config["Gemini:Endpoint"]!;
 
-        public async Task<string?> GenerateQuizFromInterestsAsync(string interests, int level)
+        public async Task<string?> GenerateQuizFromInterestsAsync(string topic, int level, int questionCount = 10)
         {
+            string difficultyLevel = level switch
+            {
+                0 => "Entry Level ",
+                1 => "Basic Level",
+                2 => "Middle Level",
+                3 => "Advanced Level",
+                _ => "Intermediate Level",
+            };
             string prompt = $@"
-                    Create a quiz with 10 multiple choice questions based on the following topics: {interests}. Make sure to include questions from all the listed interests
-                    and if there are more than 10 interests, choose randomnly. Shuffle the questions as well.
-                    The quiz should be suitable for a level {level} audience.
-                    
-                    Difficulty levels:
-                    - Level 0: Entry Level, beginnner knowledge 
-                    - Level 1: Basic Level, simple concepts
-                    - Level 2: Middle Level, intermediate knowledge
-                    - Level 3: Top Level, advanced concepts
-
+                    You are a quiz generator agent. Create a quiz with {questionCount} multiple choice questions based on the topic: {topic}. 
+                    The quiz should be suitable for a {difficultyLevel}.
+                   
                     Each question should have:
                     - A question statement
-                    - Four options labeled A, B, C, D
-                    - Correct answer letter
+                    - 2-6 options with just text
+                    - Correct answer text
                     
                     Respond in JSON format like:
                     [
                       {{
                         ""question"": ""..."",
-                        ""options"": {{""A"": ""..."", ""B"": ""..."", ""C"": ""..."", ""D"": ""...""}},
-                        ""answer"": ""A""
+                        ""options"": [""..."", ""..."", ...],
+                        ""answer"": ""...""
                       }},
                     ]";
 
@@ -57,10 +60,10 @@ namespace Infrastructure.Services.Gemini
             var contentPayload = new StringContent(json, Encoding.UTF8, "application/json");
 
             var timeElapsed = Stopwatch.StartNew();
-
-            var endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={ApiKey}";
+            var endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=AIzaSyBIQTIgOWoIL1cMGpeyhAvXRjZ7RH7tQA0";
             var resp = await HttpClient.PostAsync(endpoint, contentPayload);
             timeElapsed.Stop();
+
             Console.WriteLine("Time Elapsed: " + timeElapsed.ElapsedMilliseconds);
 
             if (!resp.IsSuccessStatusCode)
@@ -73,30 +76,10 @@ namespace Infrastructure.Services.Gemini
                 .GetProperty("candidates")[0]
                 .GetProperty("content")
                 .GetProperty("parts");
+
             var response = parts[0].GetProperty("text").GetString();
-            return response;
-        }
 
-        public class GeminiRequest
-        {
-            public List<GeminiContent> contents { get; set; } = new();
-            public GeminiGenerationConfig generationConfig { get; set; } = new();
-        }
-
-        public class GeminiGenerationConfig
-        {
-            public double temperature { get; set; }
-            public int topK { get; set; }
-        }
-
-        public class GeminiContent
-        {
-            public List<GeminiPart> parts { get; set; } = new();
-        }
-
-        public class GeminiPart
-        {
-            public string text { get; set; } = "";
+            return response!.Trim().Trim('`')[4..].Trim();
         }
     }
 }
