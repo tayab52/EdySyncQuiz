@@ -55,7 +55,7 @@ namespace Infrastructure.Services.Wasabi
 
                 return key;
             }
-            catch (Exception ex)
+            catch
             {
                 throw;
             }

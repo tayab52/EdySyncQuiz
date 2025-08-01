@@ -26,6 +26,7 @@ namespace PresentationAPI.Controllers.Quiz
                 return BadRequest(response);
             }
             var quizJson = await quizService.GenerateQuizFromInterestsAsync(user.Interests, (int)user.Level!);
+            Console.WriteLine("Quiz JSON: " + quizJson);
             return Ok(quizJson);
         }
     }

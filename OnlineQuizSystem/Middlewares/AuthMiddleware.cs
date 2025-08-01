@@ -95,7 +95,7 @@ namespace PresentationAPI.Middlewares
             }
 
             var refreshToken = dbContext.RefreshTokens
-                .Where(r => r.UserId == userId)
+                .Where(r => r.UserID == userId)
                 .OrderByDescending(r => r.CreatedAt)
                 .FirstOrDefault();
 

@@ -173,7 +173,7 @@ namespace Infrastructure.Services.Auth
             var refreshToken = new RefreshToken
             {
                 Token = Guid.NewGuid().ToString(),
-                UserId = user.UserID,
+                UserID = user.UserID,
                 ExpiresAt = DateTime.UtcNow.AddDays(15)
             };
 
@@ -247,7 +247,7 @@ namespace Infrastructure.Services.Auth
         {
             ResponseVM response = ResponseVM.Instance;
             var normalizedEmail = email.Trim().ToLowerInvariant();
-            var user = appDBContext.Users.FirstOrDefault(u => u.Email.ToLower().Contains(email.ToLower()));
+            var user = appDBContext.Users.FirstOrDefault(u => u.Email.Contains(email, StringComparison.CurrentCultureIgnoreCase));
 
             if (user == null)
             {
@@ -395,7 +395,7 @@ namespace Infrastructure.Services.Auth
                 response.ErrorMessage = "Invalid or expired refresh token.";
                 return response;
             }
-            var user = appDBContext.Users.Find(refreshToken.UserId);
+            var user = appDBContext.Users.Find(refreshToken.UserID);
             if (user == null)
             {
                 response.StatusCode = ResponseCode.NotFound;

@@ -36,7 +36,6 @@ namespace Infrastructure.Services.Gemini
                         ""options"": {{""A"": ""..."", ""B"": ""..."", ""C"": ""..."", ""D"": ""...""}},
                         ""answer"": ""A""
                       }},
-                      ...
                     ]";
 
             var body = new
@@ -59,7 +58,7 @@ namespace Infrastructure.Services.Gemini
 
             var timeElapsed = Stopwatch.StartNew();
 
-            var endpoint = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={ApiKey}";
+            var endpoint = $"{URI}?key={ApiKey}";
             var resp = await HttpClient.PostAsync(endpoint, contentPayload);
             timeElapsed.Stop();
             Console.WriteLine("Time Elapsed: " + timeElapsed.ElapsedMilliseconds);
