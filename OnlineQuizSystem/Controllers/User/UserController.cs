@@ -198,7 +198,7 @@ namespace PresentationAPI.Controllers.User
                 base64Image = Convert.ToBase64String(imageBytes);
             }
 
-            response = await userService.UpdateUserProfile(userDetails.Username, base64Image);
+            response = await userService.UpdateUserProfile(userDetails.Username!, base64Image);
 
             if (response.StatusCode == ResponseCode.Success)
                 return Ok(response);

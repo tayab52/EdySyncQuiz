@@ -174,7 +174,7 @@ namespace Infrastructure.Services.Auth
             {
                 Token = Guid.NewGuid().ToString(),
                 UserId = user.UserID,
-                ExpiresAt = DateTime.UtcNow.AddDays(14)
+                ExpiresAt = DateTime.UtcNow.AddDays(15)
             };
 
             appDBContext.RefreshTokens.Add(refreshToken);
@@ -195,7 +195,6 @@ namespace Infrastructure.Services.Auth
 
             var claims = new List<Claim>
             {
-                new("sub", user.UserID.ToString()),
                 new(ClaimTypes.NameIdentifier, user.UserID.ToString()),
                 new(ClaimTypes.Email, user.Email),
                 new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
@@ -206,7 +205,7 @@ namespace Infrastructure.Services.Auth
                 Subject = new ClaimsIdentity(claims),
                 Issuer = config["JWT:ValidIssuer"],
                 Audience = config["JWT:ValidAudience"],
-                Expires = DateTime.UtcNow.AddDays(7),
+                Expires = DateTime.UtcNow.AddMinutes(1),
                 SigningCredentials = new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256),
 
                 EncryptingCredentials = new EncryptingCredentials(
@@ -405,7 +404,7 @@ namespace Infrastructure.Services.Auth
             }
             var newAccessToken = GenerateJWT(user);
             refreshToken.Token = Guid.NewGuid().ToString();
-            refreshToken.ExpiresAt = DateTime.UtcNow.AddDays(14);
+            refreshToken.ExpiresAt = DateTime.UtcNow.AddDays(15);
             appDBContext.SaveChanges();
             response.StatusCode = ResponseCode.Success;
             response.ResponseMessage = "Tokens refreshed successfully.";

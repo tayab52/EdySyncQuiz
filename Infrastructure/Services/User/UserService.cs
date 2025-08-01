@@ -11,7 +11,6 @@ using Dapper;
 using Infrastructure.Context;
 using Infrastructure.Services.Token;
 using Infrastructure.Services.Wasabi;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System.Text.Json;
 
@@ -273,7 +272,7 @@ namespace Infrastructure.Services.User
                 return response;
             }
 
-            if (user.ExpiresAt <= DateTime.UtcNow.AddMinutes(1)) // check if url has expired or about to expire
+            if (user.ExpiresAt <= DateTime.UtcNow.AddDays(7)) // check if url has expired or about to expire
             {
                 string newSignedUrl = s3Client.GetPreSignedURL(new GetPreSignedUrlRequest
                 {
@@ -439,7 +438,7 @@ namespace Infrastructure.Services.User
         {
             ResponseVM response = ResponseVM.Instance;
 
-            var userId = tokenService.UserID; // implement this based on your auth
+            var userId = tokenService.UserID;
 
             var user = await appDBContext.Users.FindAsync(userId);
             if (user == null)
@@ -449,13 +448,13 @@ namespace Infrastructure.Services.User
                 return response;
             }
 
-            if(!string.IsNullOrEmpty(username)) user.Username = username;
+            if (!string.IsNullOrEmpty(username)) user.Username = username;
             if (!string.IsNullOrEmpty(base64Image))
             {
                 response = await SaveUserProfileImage(base64Image);
                 if (response.StatusCode != ResponseCode.Success) // image upload failed
                 {
-                    return response; 
+                    return response;
                 }
                 user.ProfileImage = response.Data?.ProfileImage!;
             }
@@ -465,7 +464,7 @@ namespace Infrastructure.Services.User
 
             response.StatusCode = ResponseCode.Success;
             response.ResponseMessage = "Profile updated successfully.";
-            response.Data = user.ToUserDTO() ;
+            response.Data = user.ToUserDTO();
             return response;
         }
     }

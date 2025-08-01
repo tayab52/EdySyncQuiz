@@ -1,5 +1,3 @@
-using Application.DataTransferModels.ResponseModel;
-using CommonOperations.Constants;
 using Infrastructure.Context;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -37,7 +35,7 @@ namespace PresentationAPI
                         ValidAudience = builder.Configuration["Jwt:ValidAudience"],
                         IssuerSigningKey = signingKey,
                         TokenDecryptionKey = encryptionKey,
-                        ValidateLifetime = false, // disable default lifetime validation so middleware can read claims
+                        ValidateLifetime = false, // disables default lifetime validation so middleware can read claims
                         ClockSkew = TimeSpan.Zero // disables the default 5-minute clock skew
                     };
                 });

@@ -11,21 +11,14 @@ using System.Text;
 
 namespace PresentationAPI.Middlewares
 {
-    public class AuthMiddleware
+    public class AuthMiddleware(RequestDelegate next, IConfiguration config)
     {
-        private readonly RequestDelegate _next;
-        private readonly IConfiguration _config;
-
-        public AuthMiddleware(RequestDelegate next, IConfiguration config)
-        {
-            _next = next;
-            _config = config;
-        }
+        private readonly RequestDelegate _next = next;
+        private readonly IConfiguration _config = config;
 
         public async Task Invoke(HttpContext context, TokenService tokenService, AppDBContext dbContext, IAuthService authService)
         {
             var path = context.Request.Path.Value?.ToLower();
-
             string[] excludedPaths = [
                 "/api/auth/signin",
                 "/api/auth/signup",
@@ -52,7 +45,6 @@ namespace PresentationAPI.Middlewares
             }
 
             string? authHeader = context.Request.Headers.Authorization.ToString();
-            Console.WriteLine("Auth Header: " + authHeader);
             if (string.IsNullOrEmpty(authHeader) || !authHeader.StartsWith("Bearer "))
             {
                 response.StatusCode = ResponseCode.Unauthorized;
@@ -63,17 +55,26 @@ namespace PresentationAPI.Middlewares
             }
 
             string accessToken = authHeader["Bearer ".Length..].Trim();
-            Console.WriteLine("Access Token: " + accessToken);
 
             Guid userId;
             try
             {
                 var handler = new JwtSecurityTokenHandler();
-                var jwtToken = handler.ReadJwtToken(accessToken);
-                var subClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == "sub");
-                Console.WriteLine("Sub claim: "+ subClaim?.Value);
-                userId = Guid.Parse(subClaim?.Value ?? Guid.Empty.ToString());
-                Console.WriteLine("Parsed User ID: " + userId);
+                var validationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer = _config["Jwt:ValidIssuer"],
+                    ValidAudience = _config["Jwt:ValidAudience"],
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Secret"]!)),
+                    TokenDecryptionKey = new SymmetricSecurityKey(Convert.FromBase64String(_config["JWT:EncryptionKey"]!)),
+                    ValidateLifetime = false
+                };
+
+                var principal = handler.ValidateToken(accessToken, validationParameters, out SecurityToken validatedToken);
+                var nameIdClaim = principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
+                userId = Guid.Parse(nameIdClaim?.Value ?? Guid.Empty.ToString());
             }
             catch
             {
@@ -103,7 +104,6 @@ namespace PresentationAPI.Middlewares
                 if (refreshToken != null)
                     authService.SignOut(new TokenRequestVM { RefreshToken = refreshToken.Token });
 
-                Console.WriteLine("Refresh Token expired");
                 response.StatusCode = ResponseCode.Unauthorized;
                 response.ErrorMessage = "Session expired. Please login again.";
                 context.Response.StatusCode = StatusCodes.Status401Unauthorized;
@@ -111,7 +111,6 @@ namespace PresentationAPI.Middlewares
                 return;
             }
 
-            Console.WriteLine("Refresh Token: " + refreshToken.Token);
             var authResult = authService.RefreshToken(new TokenRequestVM { RefreshToken = refreshToken.Token });
 
             if (authResult.StatusCode != ResponseCode.Success)
@@ -125,7 +124,7 @@ namespace PresentationAPI.Middlewares
 
             context.Response.Headers["X-New-Access-Token"] = authResult.Data!.AccessToken;
             context.Response.Headers["X-New-Refresh-Token"] = authResult.Data.RefreshToken;
-            context.Response.Headers["Access-Control-Expose-Headers"] = "X-New-Access-Token, X-New-Refresh-Token";
+            context.Response.Headers.AccessControlExposeHeaders = "X-New-Access-Token, X-New-Refresh-Token";
 
             await _next(context);
         }
