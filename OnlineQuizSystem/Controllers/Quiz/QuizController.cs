@@ -21,7 +21,7 @@ namespace PresentationAPI.Controllers.Quiz
         public async Task<IActionResult> GenerateQuiz()
         {
             ResponseVM response = ResponseVM.Instance;
-            Guid userID = tokenService.UserID;
+            long userID = tokenService.UserID;
             var user = appDBContext.Users.Find(userID);
             if (user == null || string.IsNullOrWhiteSpace(user.Interests))
             {

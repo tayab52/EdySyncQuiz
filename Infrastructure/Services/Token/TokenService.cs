@@ -5,7 +5,7 @@ namespace Infrastructure.Services.Token
 {
     public class TokenService
     {
-        public Guid UserID;
+        public long UserID;
         public string Email = "";
         public bool IsAccessTokenExpired = true;
 
@@ -19,7 +19,7 @@ namespace Infrastructure.Services.Token
                     IEnumerable<Claim> claims = identity.Claims;
                     if (claims.Any())
                     {
-                        UserID = Guid.Parse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
+                        UserID = Convert.ToInt64(identity.FindFirst("ID").Value);
                         Email = user.FindFirst(ClaimTypes.Email)?.Value!;
                         var expClaim = user.FindFirst("exp")?.Value;
                         if (long.TryParse(expClaim, out var expUnix))

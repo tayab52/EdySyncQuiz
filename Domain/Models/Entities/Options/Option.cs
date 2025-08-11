@@ -1,21 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Domain.Models.BaseEntities;
 
 namespace Domain.Models.Entities.Options
 {
-    public class Option
+    public class Option : BaseEntity
     {
-        public Guid OptionID { get; set; }
-
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public long ID { get; set; }
+        [Column(TypeName = "NVARCHAR(500)")]
         public string OptionText { get; set; } = string.Empty; 
-
-        public bool IsCorrect { get; set; } = false; // Indicates if the option is correct
-
-        [ForeignKey("Question")]
-        public Guid QuestionID { get; set; } 
+        public bool IsCorrect { get; set; } = false;
+        public long QuestionID { get; set; } 
     }
 }

@@ -1,27 +1,24 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
+using Domain.Models.BaseEntities;
 using Domain.Models.Entities.Answers;
 using Domain.Models.Entities.Questions;
 using Domain.Models.Entities.Users;
 
 namespace Domain.Models.Entities.Quiz
 {
-    public class Quiz
+    public class Quiz : BaseEntity
     {
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         [Key]
-        public Guid QuizID { get; set; }
-
+        public long ID { get; set; }
+        [Column(TypeName = "NVARCHAR(250)")]       
         public string Topic { get; set; } = string.Empty;
-
-        [Column(TypeName = "datetime2")]
-        public DateTime TestDate { get; set; }
-
-        public string? Status { get; set; } = "Pending"; // ("Pending", "Completed", "Abandoned")
-
-        public int? Score { get; set; } = 0;
-
-        [ForeignKey("User")]
-        public Guid UserID { get; set; }
+        [Column(TypeName = "NVARCHAR(250)")]
+        public string SubTopic { get; set; } = string.Empty;
+        public int? TotalQuestions { get; set; } = 0;
+        public bool IsCompleted { get; set; } = false;
+        public long UserID { get; set; }
     }
 }

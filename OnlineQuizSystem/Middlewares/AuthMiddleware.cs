@@ -38,7 +38,7 @@ namespace PresentationAPI.Middlewares
 
             var response = ResponseVM.Instance;
 
-            if (!tokenService.IsAccessTokenExpired && tokenService.UserID != Guid.Empty)
+            if (!tokenService.IsAccessTokenExpired && tokenService.UserID != null)
             {
                 await _next(context);
                 return;
@@ -56,7 +56,7 @@ namespace PresentationAPI.Middlewares
 
             string accessToken = authHeader["Bearer ".Length..].Trim();
 
-            Guid userId;
+            long userId;
             try
             {
                 var handler = new JwtSecurityTokenHandler();
@@ -74,7 +74,14 @@ namespace PresentationAPI.Middlewares
 
                 var principal = handler.ValidateToken(accessToken, validationParameters, out SecurityToken validatedToken);
                 var nameIdClaim = principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier);
-                userId = Guid.Parse(nameIdClaim?.Value ?? Guid.Empty.ToString());
+                if (nameIdClaim == null || !long.TryParse(nameIdClaim.Value, out userId))
+                {
+                    response.StatusCode = ResponseCode.Unauthorized;
+                    response.ErrorMessage = "Invalid or missing user ID in token.";
+                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                    await context.Response.WriteAsJsonAsync(response);
+                    return;
+                }
             }
             catch
             {
@@ -85,7 +92,7 @@ namespace PresentationAPI.Middlewares
                 return;
             }
 
-            if (userId == Guid.Empty)
+            if (userId == null)
             {
                 response.StatusCode = ResponseCode.Unauthorized;
                 response.ErrorMessage = "Invalid or missing user ID in token.";

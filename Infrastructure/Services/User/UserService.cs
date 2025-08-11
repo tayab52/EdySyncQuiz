@@ -16,18 +16,39 @@ using System.Text.Json;
 
 namespace Infrastructure.Services.User
 {
-    public class UserService(AppDBContext appDBContext, TokenService tokenService, IConfiguration config, IAmazonS3 s3Client, WasabiService wasabiService) : IUserService
+    public class UserService : IUserService
     {
+        private readonly AppDBContext _appDBContext;
+        private readonly TokenService _tokenService;
+        private readonly IConfiguration _config;
+        private readonly IAmazonS3 _s3Client;
+        private readonly WasabiService _wasabiService;
+
+        public UserService(
+            AppDBContext appDBContext,
+            TokenService tokenService,
+            IConfiguration config,
+            IAmazonS3 s3Client,
+            WasabiService wasabiService)
+        {
+            _appDBContext = appDBContext;
+            _tokenService = tokenService;
+            _config = config;
+            _s3Client = s3Client;
+            _wasabiService = wasabiService;
+        }
+
+
         public ResponseVM GetUser()
         {
             ResponseVM response = ResponseVM.Instance;
 
             try
             {
-                Guid tokenUserId = tokenService.UserID;
-                string tokenEmail = tokenService.Email;
+                long tokenUserId = _tokenService.UserID;
+                string tokenEmail = _tokenService.Email;
 
-                if (string.IsNullOrEmpty(tokenEmail) && tokenUserId == Guid.Empty)
+                if (string.IsNullOrEmpty(tokenEmail) && tokenUserId == null)
                 {
                     response.StatusCode = ResponseCode.Unauthorized;
                     response.ErrorMessage = "Invalid Token";
@@ -69,7 +90,7 @@ namespace Infrastructure.Services.User
         public ResponseVM ChangePassword(ChangePasswordVM user)
         {
             ResponseVM response = ResponseVM.Instance;
-            string? email = tokenService?.Email;
+            string? email = _tokenService?.Email;
             if (email == null)
             {
                 response.StatusCode = ResponseCode.Unauthorized;
@@ -77,7 +98,7 @@ namespace Infrastructure.Services.User
                 return response;
             }
 
-            var existingUser = appDBContext.Users.FirstOrDefault(u => u.Email == email);
+            var existingUser = _appDBContext.Users.FirstOrDefault(u => u.Email == email);
             if (existingUser == null)
             {
                 response.StatusCode = ResponseCode.NotFound;
@@ -93,8 +114,8 @@ namespace Infrastructure.Services.User
                     return response;
                 }
                 existingUser.Password = Encryption.EncryptPassword(user.NewPassword);
-                appDBContext.Users.Update(existingUser);
-                appDBContext.SaveChanges();
+                _appDBContext.Users.Update(existingUser);
+                _appDBContext.SaveChanges();
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "Password updated successfully.";
                 response.Data = new
@@ -115,14 +136,14 @@ namespace Infrastructure.Services.User
             ResponseVM response = ResponseVM.Instance;
             try
             {
-                Guid tokenUserId = tokenService.UserID;
-                if (tokenUserId == Guid.Empty)
+                long tokenUserId = _tokenService.UserID;
+                if (tokenUserId == null)
                 {
                     response.StatusCode = ResponseCode.Unauthorized;
                     response.ErrorMessage = "Invalid Token";
                     return response;
                 }
-                var existingUser = appDBContext.Users.Find(tokenUserId);
+                var existingUser = _appDBContext.Users.Find(tokenUserId);
                 if (existingUser == null)
                 {
                     response.StatusCode = ResponseCode.NotFound;
@@ -137,8 +158,8 @@ namespace Infrastructure.Services.User
                 existingUser.Gender = user.Gender;
                 existingUser.Level = user.Level;
                 existingUser.Theme = user.Theme ?? "light";
-                appDBContext.Users.Update(existingUser);
-                appDBContext.SaveChanges();
+                _appDBContext.Users.Update(existingUser);
+                _appDBContext.SaveChanges();
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "User updated successfully.";
                 response.Data = existingUser.ToUserDTO();
@@ -157,16 +178,16 @@ namespace Infrastructure.Services.User
             ResponseVM response = ResponseVM.Instance;
             try
             {
-                Guid tokenUserId = tokenService.UserID;
+                long tokenUserId = _tokenService.UserID;
 
-                if (tokenUserId == Guid.Empty)
+                if (tokenUserId == null)
                 {
                     response.StatusCode = ResponseCode.Unauthorized;
                     response.ErrorMessage = "Invalid Token";
                     return response;
                 }
 
-                var existingUser = appDBContext.Users.Find(tokenUserId);
+                var existingUser = _appDBContext.Users.Find(tokenUserId);
                 if (existingUser == null)
                 {
                     response.StatusCode = ResponseCode.NotFound;
@@ -174,8 +195,8 @@ namespace Infrastructure.Services.User
                     return response;
                 }
                 existingUser.IsDeleted = true;
-                appDBContext.Users.Update(existingUser);
-                appDBContext.SaveChanges();
+                _appDBContext.Users.Update(existingUser);
+                _appDBContext.SaveChanges();
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "User deleted successfully.";
             }
@@ -206,12 +227,12 @@ namespace Infrastructure.Services.User
                 return response;
             }
 
-            string userId = tokenService.UserID.ToString();
+            string userId = _tokenService.UserID.ToString();
             string filename = $"users/{userId}/profilepic_{DateTime.UtcNow:yyyyMMdd_HHmmss}.{fileExtension}";
 
             try
             {
-                await wasabiService.UploadBase64ImageAsync(base64Image, filename);
+                await _wasabiService.UploadBase64ImageAsync(base64Image, filename);
             }
             catch
             {
@@ -220,15 +241,15 @@ namespace Infrastructure.Services.User
                 return response;
             }
 
-            string signedUrl = s3Client.GetPreSignedURL(new GetPreSignedUrlRequest
+            string signedUrl = _s3Client.GetPreSignedURL(new GetPreSignedUrlRequest
             {
-                BucketName = config["WasabiSettings:BucketName"],
+                BucketName = _config["WasabiSettings:BucketName"],
                 Key = filename,
-                Expires = DateTime.UtcNow.AddSeconds(int.Parse(config["WasabiSettings:URLExpirySeconds"]!))
+                Expires = DateTime.UtcNow.AddSeconds(int.Parse(_config["WasabiSettings:URLExpirySeconds"]!))
             });
 
-            var user = appDBContext.Users
-                .FirstOrDefault(s => s.UserID == tokenService.UserID && s.IsDeleted == false);
+            var user = _appDBContext.Users
+                .FirstOrDefault(s => s.UserID == _tokenService.UserID && s.IsDeleted == false);
 
             if (user == null)
             {
@@ -239,10 +260,10 @@ namespace Infrastructure.Services.User
 
             user.ProfileImage = signedUrl;
             user.ImageKey = filename;
-            user.ExpiresAt = DateTime.UtcNow.AddSeconds(int.Parse(config["WasabiSettings:URLExpirySeconds"]!));
+            user.ExpiresAt = DateTime.UtcNow.AddSeconds(int.Parse(_config["WasabiSettings:URLExpirySeconds"]!));
 
-            appDBContext.Users.Update(user);
-            await appDBContext.SaveChangesAsync();
+            _appDBContext.Users.Update(user);
+            await _appDBContext.SaveChangesAsync();
 
             response.StatusCode = ResponseCode.Success;
             response.ResponseMessage = "User profile image saved to Wasabi.";
@@ -253,9 +274,9 @@ namespace Infrastructure.Services.User
         public ResponseVM GetUserProfileImage()
         {
             ResponseVM response = ResponseVM.Instance;
-            string userId = tokenService.UserID.ToString();
+            string userId = _tokenService.UserID.ToString();
 
-            var user = appDBContext.Users
+            var user = _appDBContext.Users
                 .FirstOrDefault(s => s.UserID.ToString() == userId && s.IsDeleted == false);
 
             if (user == null)
@@ -274,18 +295,18 @@ namespace Infrastructure.Services.User
 
             if (user.ExpiresAt <= DateTime.UtcNow.AddMinutes(1)) // check if url has expired or about to expire
             {
-                string newSignedUrl = s3Client.GetPreSignedURL(new GetPreSignedUrlRequest
+                string newSignedUrl = _s3Client.GetPreSignedURL(new GetPreSignedUrlRequest
                 {
-                    BucketName = config["WasabiSettings:BucketName"],
+                    BucketName = _config["WasabiSettings:BucketName"],
                     Key = user.ImageKey,
-                    Expires = DateTime.UtcNow.AddSeconds(int.Parse(config["WasabiSettings:URLExpirySeconds"]!))
+                    Expires = DateTime.UtcNow.AddSeconds(int.Parse(_config["WasabiSettings:URLExpirySeconds"]!))
                 });
 
                 user.ProfileImage = newSignedUrl;
-                user.ExpiresAt = DateTime.UtcNow.AddSeconds(int.Parse(config["WasabiSettings:URLExpirySeconds"]!));
+                user.ExpiresAt = DateTime.UtcNow.AddSeconds(int.Parse(_config["WasabiSettings:URLExpirySeconds"]!));
 
-                appDBContext.Users.Update(user);
-                appDBContext.SaveChanges();
+                _appDBContext.Users.Update(user);
+                _appDBContext.SaveChanges();
             }
 
             response.StatusCode = ResponseCode.Success;
@@ -299,14 +320,14 @@ namespace Infrastructure.Services.User
             ResponseVM response = ResponseVM.Instance;
             try
             {
-                Guid tokenUserId = tokenService.UserID;
-                if (tokenUserId == Guid.Empty)
+                long tokenUserId = _tokenService.UserID;
+                if (tokenUserId == null)
                 {
                     response.StatusCode = ResponseCode.Unauthorized;
                     response.ErrorMessage = "Invalid Token";
                     return response;
                 }
-                var existingUser = appDBContext.Users.Find(tokenUserId);
+                var existingUser = _appDBContext.Users.Find(tokenUserId);
                 if (existingUser == null)
                 {
                     response.StatusCode = ResponseCode.NotFound;
@@ -314,8 +335,8 @@ namespace Infrastructure.Services.User
                     return response;
                 }
                 existingUser.Languages = languages;
-                appDBContext.Users.Update(existingUser);
-                appDBContext.SaveChanges();
+                _appDBContext.Users.Update(existingUser);
+                _appDBContext.SaveChanges();
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "Languages updated successfully.";
                 response.Data = existingUser.ToUserDTO();
@@ -334,10 +355,10 @@ namespace Infrastructure.Services.User
             ResponseVM response = ResponseVM.Instance;
             try
             {
-                Guid tokenUserId = tokenService.UserID;
-                if (tokenUserId != Guid.Empty)
+                long tokenUserId = _tokenService.UserID;
+                if (tokenUserId != null)
                 {
-                    var existingUser = appDBContext.Users.Find(tokenUserId);
+                    var existingUser = _appDBContext.Users.Find(tokenUserId);
                     if (existingUser == null)
                     {
                         response.StatusCode = ResponseCode.NotFound;
@@ -345,8 +366,8 @@ namespace Infrastructure.Services.User
                         return response;
                     }
                     existingUser.Interests = interests;
-                    appDBContext.Users.Update(existingUser);
-                    appDBContext.SaveChanges();
+                    _appDBContext.Users.Update(existingUser);
+                    _appDBContext.SaveChanges();
                     response.StatusCode = ResponseCode.Success;
                     response.ResponseMessage = "Interests updated successfully.";
                     response.Data = existingUser.ToUserDTO();
@@ -369,14 +390,14 @@ namespace Infrastructure.Services.User
             ResponseVM response = ResponseVM.Instance;
             try
             {
-                Guid tokenUserId = tokenService.UserID;
-                if (tokenUserId == Guid.Empty)
+                long tokenUserId = _tokenService.UserID;
+                if (tokenUserId == null)
                 {
                     response.StatusCode = ResponseCode.Unauthorized;
                     response.ErrorMessage = "Invalid Token";
                     return response;
                 }
-                var existingUser = appDBContext.Users.Find(tokenUserId);
+                var existingUser = _appDBContext.Users.Find(tokenUserId);
                 if (existingUser == null)
                 {
                     response.StatusCode = ResponseCode.NotFound;
@@ -384,8 +405,8 @@ namespace Infrastructure.Services.User
                     return response;
                 }
                 existingUser.Theme = theme;
-                appDBContext.Users.Update(existingUser);
-                appDBContext.SaveChanges();
+                _appDBContext.Users.Update(existingUser);
+                _appDBContext.SaveChanges();
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "Level updated successfully.";
                 response.Data = existingUser.ToUserDTO();
@@ -404,14 +425,14 @@ namespace Infrastructure.Services.User
             ResponseVM response = ResponseVM.Instance;
             try
             {
-                Guid tokenUserId = tokenService.UserID;
-                if (tokenUserId == Guid.Empty)
+                long tokenUserId = _tokenService.UserID;
+                if (tokenUserId == null)
                 {
                     response.StatusCode = ResponseCode.Unauthorized;
                     response.ErrorMessage = "Invalid Token";
                     return response;
                 }
-                var existingUser = appDBContext.Users.Find(tokenUserId);
+                var existingUser = _appDBContext.Users.Find(tokenUserId);
                 if (existingUser == null)
                 {
                     response.StatusCode = ResponseCode.NotFound;
@@ -419,8 +440,8 @@ namespace Infrastructure.Services.User
                     return response;
                 }
                 existingUser.Level = level;
-                appDBContext.Users.Update(existingUser);
-                appDBContext.SaveChanges();
+                _appDBContext.Users.Update(existingUser);
+                _appDBContext.SaveChanges();
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "Level updated successfully.";
                 response.Data = existingUser.ToUserDTO();
@@ -438,9 +459,9 @@ namespace Infrastructure.Services.User
         {
             ResponseVM response = ResponseVM.Instance;
 
-            var userId = tokenService.UserID;
+            var userId = _tokenService.UserID;
 
-            var user = await appDBContext.Users.FindAsync(userId);
+            var user = await _appDBContext.Users.FindAsync(userId);
             if (user == null)
             {
                 response.StatusCode = ResponseCode.NotFound;
@@ -459,8 +480,8 @@ namespace Infrastructure.Services.User
                 user.ProfileImage = response.Data?.ProfileImage!;
             }
 
-            appDBContext.Users.Update(user);
-            await appDBContext.SaveChangesAsync();
+            _appDBContext.Users.Update(user);
+            await _appDBContext.SaveChangesAsync();
 
             response.StatusCode = ResponseCode.Success;
             response.ResponseMessage = "Profile updated successfully.";
