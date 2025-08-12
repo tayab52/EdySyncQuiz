@@ -125,11 +125,10 @@ namespace Infrastructure.Services.Auth
                         };
                         return response;
                     }
+
                     if (!firstUser.IsActive)
                     {
-                        // Send a new OTP to the user's email
-                        var otpResponse = SendOTP(userEntity.Email);
-
+                        var otpResponse = ResendOTP(userEntity.Email, "resend-otp");
                         response.StatusCode = ResponseCode.Unauthorized;
                         response.ErrorMessage = "User account is not active. A new OTP has been sent to your email. Please verify your email to activate your account.";
                         response.Data = new
@@ -139,19 +138,6 @@ namespace Infrastructure.Services.Auth
                         };
                         return response;
                     }
-
-                    //if (!firstUser.IsActive)
-                    //{
-                    //    response.StatusCode = ResponseCode.Success;
-
-                    //    response.ErrorMessage = "User account is not active. Please verify your email and Use Latest Otp.";
-
-                    //    response.Data = new
-                    //    {
-                    //        isActive = userEntity.IsActive
-                    //    };
-                    //    return response;
-                    //}
 
                     response.StatusCode = ResponseCode.Success;
                     response.ResponseMessage = "Login Successful";
@@ -290,14 +276,6 @@ namespace Infrastructure.Services.Auth
                 response.ErrorMessage = "User not found.";
                 return response;
             }
-
-            //if (user.IsActive && operation != "forgot-password")
-            //{
-            //    response.StatusCode = ResponseCode.BadRequest;
-            //    response.ErrorMessage = "User is already active. No need to resend OTP.";
-            //    return response;
-            //}
-
             string subject = operation == "forgot-password"
                 ? "Reset OTP for TopicTap account"
                 : "Resend OTP for TopicTap";
