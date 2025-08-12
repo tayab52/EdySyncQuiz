@@ -5,13 +5,23 @@ using System.Text.Json;
 
 namespace PresentationAPI.Middlewares
 {
-    public class ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandlingMiddleware> logger)
+    public class ErrorHandlingMiddleware
     {
+
+        private readonly RequestDelegate _next;
+        private readonly ILogger<ErrorHandlingMiddleware> _logger;
+
+        public ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandlingMiddleware> logger)
+        {
+            _next = next;
+            _logger = logger;
+        }
+
         public async Task Invoke(HttpContext context)
         {
             try
             {
-                await next(context);
+                await _next(context);
             }
             catch (Exception ex)
             {
@@ -33,7 +43,7 @@ namespace PresentationAPI.Middlewares
             var statusCode = (int)HttpStatusCode.InternalServerError;
             var errorMessage = "An unexpected error occurred.";
 
-            logger.LogError(ex, "Exception occurred while processing request {Method} {Path}", context.Request.Method, context.Request.Path);
+            _logger.LogError(ex, "Exception occurred while processing request {Method} {Path}", context.Request.Method, context.Request.Path);
 
             switch (ex)
             {
@@ -60,7 +70,7 @@ namespace PresentationAPI.Middlewares
 
             if (context.Response.HasStarted)
             {
-                logger.LogWarning("The response has already started, the error handling middleware will not modify the response.");
+                _logger.LogWarning("The response has already started, the error handling middleware will not modify the response.");
                 return;
             }
 

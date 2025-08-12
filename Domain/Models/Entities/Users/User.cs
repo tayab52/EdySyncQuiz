@@ -21,7 +21,7 @@ namespace Domain.Models.Entities.Users
         [Required]
         [Column(TypeName = "nvarchar(255)")]
         public string Password { get; set; } = string.Empty;    
-        public bool IsActive { get; set; } = true;      
+        public bool IsActive { get; set; } = false;      
 
         public bool IsDataSubmitted { get; set; } = false;
 

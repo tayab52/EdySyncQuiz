@@ -14,8 +14,8 @@ namespace Infrastructure.Services.User
         private readonly TokenService _tokenService;
         public UserDetailsService(AppDBContext appDBContext, TokenService tokenService)
         {
-            appDBContext = _appDBContext;
-            tokenService = _tokenService;
+            _appDBContext = appDBContext;
+            _tokenService = tokenService;
         }
         public ResponseVM SaveUserDetails(UserDetailsVM userDetails)
         {

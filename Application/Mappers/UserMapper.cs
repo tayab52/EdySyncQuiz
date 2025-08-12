@@ -12,6 +12,7 @@ namespace Application.Mappers
                 Username = vm.Username,
                 Email = vm.Email,
                 Password = vm.Password,
+                IsActive = false,
             };
         }
 

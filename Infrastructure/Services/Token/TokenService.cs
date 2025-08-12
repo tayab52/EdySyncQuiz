@@ -16,19 +16,41 @@ namespace Infrastructure.Services.Token
             {
                 if (user.Identity is ClaimsIdentity identity)
                 {
-                    IEnumerable<Claim> claims = identity.Claims;
-                    if (claims.Any())
+                    var userIdClaim = identity.FindFirst(ClaimTypes.NameIdentifier);
+                    if (userIdClaim != null && long.TryParse(userIdClaim.Value, out var userId))
                     {
-                        UserID = Convert.ToInt64(identity.FindFirst("ID").Value);
-                        Email = user.FindFirst(ClaimTypes.Email)?.Value!;
-                        var expClaim = user.FindFirst("exp")?.Value;
-                        if (long.TryParse(expClaim, out var expUnix))
-                        {
-                            var expiryDate = DateTimeOffset.FromUnixTimeSeconds(expUnix).UtcDateTime;
-                            IsAccessTokenExpired = expiryDate < DateTime.UtcNow;
-                        }
+                        UserID = userId;
+                    }
+
+                    var emailClaim = identity.FindFirst(ClaimTypes.Email);
+                    if (emailClaim != null)
+                    {
+                        Email = emailClaim.Value;
+                    }
+
+                    var expClaim = identity.FindFirst("exp")?.Value;
+                    if (long.TryParse(expClaim, out var expUnix))
+                    {
+                        var expiryDate = DateTimeOffset.FromUnixTimeSeconds(expUnix).UtcDateTime;
+                        IsAccessTokenExpired = expiryDate < DateTime.UtcNow;
                     }
                 }
+
+                //if (user.Identity is ClaimsIdentity identity)
+                //{
+                //    IEnumerable<Claim> claims = identity.Claims;
+                //    if (claims.Any())
+                //    {
+                //        UserID = Convert.ToInt64(identity.FindFirst("ID").Value);
+                //        Email = user.FindFirst(ClaimTypes.Email)?.Value!;
+                //        var expClaim = user.FindFirst("exp")?.Value;
+                //        if (long.TryParse(expClaim, out var expUnix))
+                //        {
+                //            var expiryDate = DateTimeOffset.FromUnixTimeSeconds(expUnix).UtcDateTime;
+                //            IsAccessTokenExpired = expiryDate < DateTime.UtcNow;
+                //        }
+                //    }
+                //}
             }
         }
     }

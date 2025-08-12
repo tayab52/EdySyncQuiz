@@ -45,19 +45,18 @@ namespace Infrastructure.Services.User
 
             try
             {
-                long tokenUserId = _tokenService.UserID;
-                string tokenEmail = _tokenService.Email;
+                
 
-                if (string.IsNullOrEmpty(tokenEmail) && tokenUserId == null)
-                {
-                    response.StatusCode = ResponseCode.Unauthorized;
-                    response.ErrorMessage = "Invalid Token";
-                    return response;
-                }
+                //if (string.IsNullOrEmpty(tokenEmail) && tokenUserId == null)
+                //{
+                //    response.StatusCode = ResponseCode.Unauthorized;
+                //    response.ErrorMessage = "Invalid Token";
+                //    return response;
+                //}
 
                 var parameters = new DynamicParameters();
-                parameters.Add("@Email", tokenEmail);
-                parameters.Add("@UserID", tokenUserId);
+               // parameters.Add("@Email", _tokenService.Email);
+                parameters.Add("@UserID", _tokenService.UserID);
 
                 var users = Methods.ExecuteStoredProceduresList("SP_GetUser", parameters);
 
@@ -68,15 +67,15 @@ namespace Infrastructure.Services.User
                     return response;
                 }
 
-                dynamic firstUser = users.Result.First();
-                var userJson = JsonSerializer.Serialize(firstUser);
-                var userEntity = JsonSerializer.Deserialize<Domain.Models.Entities.Users.User>(userJson)!;
+                //dynamic firstUser = users.Result.First();
+                //var userJson = JsonSerializer.Serialize(firstUser);
+                //var userEntity = JsonSerializer.Deserialize<Domain.Models.Entities.Users.User>(userJson)!;
 
-                UserDTO userDTO = UserMapper.MapToDTO(users.Result);
+                //UserDTO userDTO = UserMapper.MapToDTO(users.Result);
 
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "User fetched successfully.";
-                response.Data = userDTO;
+                response.Data = users;
             }
             catch (Exception e)
             {
@@ -179,7 +178,7 @@ namespace Infrastructure.Services.User
             try
             {
                 long tokenUserId = _tokenService.UserID;
-
+               
                 if (tokenUserId == null)
                 {
                     response.StatusCode = ResponseCode.Unauthorized;

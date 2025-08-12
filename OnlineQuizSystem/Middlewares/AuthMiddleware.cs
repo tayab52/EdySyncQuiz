@@ -11,10 +11,17 @@ using System.Text;
 
 namespace PresentationAPI.Middlewares
 {
-    public class AuthMiddleware(RequestDelegate next, IConfiguration config)
+
+    public class AuthMiddleware
     {
-        private readonly RequestDelegate _next = next;
-        private readonly IConfiguration _config = config;
+        private readonly RequestDelegate _next;
+        private readonly IConfiguration _config;
+
+        public AuthMiddleware(RequestDelegate next, IConfiguration config)
+        {
+            _next = next;
+            _config = config;
+        }
 
         public async Task Invoke(HttpContext context, TokenService tokenService, AppDBContext dbContext, IAuthService authService)
         {
