@@ -10,6 +10,7 @@ using Application.DataTransferModels.ResponseModel;
 using Application.Interfaces.Gemini;
 using Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
+using Infrastructure.Services.Token;
 
 namespace Infrastructure.Services.Gemini
 {
@@ -19,13 +20,15 @@ namespace Infrastructure.Services.Gemini
         private readonly string _apiKey;
         private readonly string _endpoint;
         private readonly AppDBContext _dbContext;
+        private readonly TokenService _tokenService;
 
 
-        public GeminiQuizService(IConfiguration config, AppDBContext dbContext)
+        public GeminiQuizService(IConfiguration config, AppDBContext dbContext, TokenService tokenService)
         {
             _apiKey = config["Gemini:ApiKey"]!;  
             _endpoint = config["Gemini:Endpoint"]!;
             _dbContext = dbContext;
+            _tokenService = tokenService;
 
         }
 
@@ -134,7 +137,7 @@ namespace Infrastructure.Services.Gemini
                     SubTopic = model.SubTopic ?? "",
                     TotalQuestions = finalQuestionCount,
                     IsCompleted = false,
-                    //UserID = 
+                    UserID = _tokenService.UserID
                 };
                 _dbContext.Quizzes.Add(quiz);
                 await _dbContext.SaveChangesAsync();
@@ -211,7 +214,6 @@ namespace Infrastructure.Services.Gemini
                 //}
                 response.ResponseMessage = "Question Generated Successfully";
                 response.StatusCode = 200;
-                //response.Data = quizList;
                 return (response);
             }
             catch (Exception ex)
