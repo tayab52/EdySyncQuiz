@@ -128,6 +128,7 @@ namespace Infrastructure.Services.Gemini
                 }
 
                 ////////////////////////////////////
+                // Store Data In DataBase
 
                 var questions = new List<Question>();
                 var options = new List<Option>();
@@ -180,8 +181,6 @@ namespace Infrastructure.Services.Gemini
 
                 _dbContext.Options.AddRange(options);
                 await _dbContext.SaveChangesAsync();
-
-                //////////////////////////
 
 
                 //var quizList = new List<QuizQuestionVM>();
