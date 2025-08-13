@@ -1,5 +1,6 @@
 ﻿using Amazon.S3;
 using Application.Interfaces.Auth;
+using Application.Interfaces.Gemini;
 using Application.Interfaces.User;
 using Infrastructure.Services.Auth;
 using Infrastructure.Services.Gemini;
@@ -16,9 +17,10 @@ namespace PresentationAPI.InjectServices
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IUserDetailsService, UserDetailsService>();
+            //services.AddScoped<GeminiQuizService>();
+            services.AddScoped<IQuizService, GeminiQuizService>();
             services.AddScoped<TokenService>();
             services.AddScoped<WasabiService>();
-            services.AddScoped<GeminiQuizService>();
             services.AddSingleton<IAmazonS3>(sp =>
             {
                 var config = sp.GetRequiredService<IConfiguration>();
