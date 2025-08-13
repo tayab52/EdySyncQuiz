@@ -8,6 +8,8 @@ using Microsoft.Extensions.Options;
 using Application.DataTransferModels.QuizViewModels;
 using Application.DataTransferModels.ResponseModel;
 using Application.Interfaces.Gemini;
+using Infrastructure.Context;
+using Microsoft.EntityFrameworkCore;
 
 namespace Infrastructure.Services.Gemini
 {
@@ -16,11 +18,15 @@ namespace Infrastructure.Services.Gemini
         private readonly HttpClient _httpClient = new();
         private readonly string _apiKey;
         private readonly string _endpoint;
+        private readonly AppDBContext _dbContext;
 
-        public GeminiQuizService(IConfiguration config)
+
+        public GeminiQuizService(IConfiguration config, AppDBContext dbContext)
         {
             _apiKey = config["Gemini:ApiKey"]!;  
-            _endpoint = config["Gemini:Endpoint"]!; 
+            _endpoint = config["Gemini:Endpoint"]!;
+            _dbContext = dbContext;
+
         }
 
         public async Task<ResponseVM> GenerateQuizAsync(QuizVM model)
@@ -120,18 +126,38 @@ namespace Infrastructure.Services.Gemini
 
                 ////////////////////////////////////
 
-
-                var quizList = new List<QuizQuestionVM>();
+                var questions = new List<Question>();
+                var options = new List<Option>();
+                var quiz = new Quiz
+                {
+                    Topic = model.Topic,
+                    SubTopic = model.SubTopic ?? "",
+                    TotalQuestions = finalQuestionCount,
+                    IsCompleted = false,
+                    //UserID = 
+                };
+                _dbContext.Quizzes.Add(quiz);
+                await _dbContext.SaveChangesAsync();
 
                 foreach (var item in quizItems)
                 {
-                    var quiz = new QuizQuestionVM
+                    var question = new Question
                     {
-                        Question = item.question,
+                        QuestionText = item.question,
                         Explanation = item.explanation ?? "",
-                        Options = new List<QuizOptionVM>()
+                        IsCorrect = false,
                     };
+                    questions.Add(question);
+                }
 
+                _dbContext.Questions.AddRange(questions);
+                await _dbContext.SaveChangesAsync();
+
+                // Now add options with correct QuestionID
+                int i = 0;
+                foreach (var item in quizItems)
+                {
+                    var questionId = questions[i].ID; 
                     foreach (var opt in item.options)
                     {
                         bool isCorrect = string.Equals(
@@ -139,19 +165,53 @@ namespace Infrastructure.Services.Gemini
                             item.correctOption.Trim(),
                             StringComparison.OrdinalIgnoreCase
                         );
-
-                        quiz.Options.Add(new QuizOptionVM
+                        options.Add(new Option
                         {
                             OptionText = opt,
-                            IsCorrect = isCorrect
+                            IsCorrect = isCorrect,
+                            QuestionID = questionId
                         });
                     }
-
-                    quizList.Add(quiz);
+                    i++;
                 }
-                response.ResponseMessage = "Question Fetched";
+
+                _dbContext.Options.AddRange(options);
+                await _dbContext.SaveChangesAsync();
+
+                //////////////////////////
+
+
+                //var quizList = new List<QuizQuestionVM>();
+
+                //foreach (var item in quizItems)
+                //{
+                //    var quiz = new QuizQuestionVM
+                //    {
+                //        Question = item.question,
+                //        Explanation = item.explanation ?? "",
+                //        Options = new List<QuizOptionVM>()
+                //    };
+
+                //    foreach (var opt in item.options)
+                //    {
+                //        bool isCorrect = string.Equals(
+                //            opt.Trim(),
+                //            item.correctOption.Trim(),
+                //            StringComparison.OrdinalIgnoreCase
+                //        );
+
+                //        quiz.Options.Add(new QuizOptionVM
+                //        {
+                //            OptionText = opt,
+                //            IsCorrect = isCorrect
+                //        });
+                //    }
+
+                //    quizList.Add(quiz);
+                //}
+                response.ResponseMessage = "Question Generated Successfully";
                 response.StatusCode = 200;
-                response.Data = quizList;
+                //response.Data = quizList;
                 return (response);
             }
             catch (Exception ex)
