@@ -35,7 +35,17 @@ namespace Infrastructure.Services.Gemini
         public async Task<ResponseVM> GenerateQuizAsync(QuizVM model)
         {
             ResponseVM response = ResponseVM.Instance;
-            string difficultyLevel = model.Level switch
+            var user = await _dbContext.Users
+                .FirstOrDefaultAsync(u => u.UserID == _tokenService.UserID);
+            //if (user == null || user.Level == null)
+            //{
+            //    response.StatusCode = 400;
+            //    response.ErrorMessage = "User or user level not found.";
+            //    return response;
+            //}
+            int userLevel = user?.Level.Value ?? 1; // Default to 1 if null
+
+            string difficultyLevel = userLevel switch
             {
                 0 => "Entry Level",
                 1 => "Basic Level",
@@ -116,7 +126,7 @@ namespace Infrastructure.Services.Gemini
                 quizJson = CleanJsonResponse(quizJson);
                 Console.WriteLine($"Cleaned Quiz JSON: {quizJson}"); // DEBUG
 
-                var quizItems = JsonSerializer.Deserialize<List<QuizItem>>(quizJson, new JsonSerializerOptions
+                var quizItems = JsonSerializer.Deserialize<List<GeminiResponseVM>>(quizJson, new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true // Case differences ignore karta hai
                 });
@@ -150,6 +160,7 @@ namespace Infrastructure.Services.Gemini
                         QuestionText = item.question,
                         Explanation = item.explanation ?? "",
                         IsCorrect = false,
+                        QuizID = quiz.ID
                     };
                     questions.Add(question);
                 }
@@ -167,7 +178,7 @@ namespace Infrastructure.Services.Gemini
                         bool isCorrect = string.Equals(
                             opt.Trim(),
                             item.correctOption.Trim(),
-                            StringComparison.OrdinalIgnoreCase
+                            StringComparison.OrdinalIgnoreCase // Ignore difference b/w Capital and small letter 
                         );
                         options.Add(new Option
                         {
@@ -178,11 +189,8 @@ namespace Infrastructure.Services.Gemini
                     }
                     i++;
                 }
-
                 _dbContext.Options.AddRange(options);
                 await _dbContext.SaveChangesAsync();
-
-
                 //var quizList = new List<QuizQuestionVM>();
 
                 //foreach (var item in quizItems)
@@ -223,6 +231,58 @@ namespace Infrastructure.Services.Gemini
             }
         }
 
+        public async Task<ResponseVM> GetAllQuizQuestionsAsync(long quizId)
+        {
+            ResponseVM response = ResponseVM.Instance;
+            var questionsDict = new Dictionary<long, QuizQuestionVM>();
+            var questionsList = new List<QuizQuestionVM>();
+
+            using (var conn = _dbContext.Database.GetDbConnection())
+            {
+                await conn.OpenAsync();
+                using (var cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = "SP_GetAllQuizQuestions";
+                    cmd.CommandType = System.Data.CommandType.StoredProcedure;
+
+                    var param = cmd.CreateParameter();
+                    param.ParameterName = "@QuizID";
+                    param.Value = quizId;
+                    cmd.Parameters.Add(param);
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            var questionId = reader.GetInt64(reader.GetOrdinal("QuestionId"));
+                            if (!questionsDict.TryGetValue(questionId, out var questionVM))
+                            {
+                                questionVM = new QuizQuestionVM
+                                {
+                                    Question = reader.GetString(reader.GetOrdinal("QuestionText")),
+                                    Explanation = reader.GetString(reader.GetOrdinal("Explanation")),
+                                    Options = new List<QuizOptionVM>()
+                                };
+                                questionsDict[questionId] = questionVM;
+                                questionsList.Add(questionVM);
+                            }
+
+                            questionVM.Options.Add(new QuizOptionVM
+                            {
+                                OptionText = reader.GetString(reader.GetOrdinal("OptionText")),
+                                IsCorrect = reader.GetBoolean(reader.GetOrdinal("IsCorrect"))
+                            });
+                        }
+                    }
+                }
+            }
+
+            response.StatusCode = 200;
+            response.ResponseMessage = "All questions fetched successfully.";
+            response.Data = questionsList;
+            return response;
+        }
+
         private string CleanJsonResponse(string? jsonResponse)
         {
             if (string.IsNullOrEmpty(jsonResponse))
@@ -246,14 +306,6 @@ namespace Infrastructure.Services.Gemini
             }
 
             return cleaned;
-        }
-
-        private class QuizItem
-        {
-            public string question { get; set; } = string.Empty;       
-            public List<string> options { get; set; } = new();         
-            public string correctOption { get; set; } = string.Empty;  
-            public string explanation { get; set; } = string.Empty;    
         }
     }
 }

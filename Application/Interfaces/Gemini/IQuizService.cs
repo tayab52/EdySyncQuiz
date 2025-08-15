@@ -11,5 +11,10 @@ namespace Application.Interfaces.Gemini
     public interface IQuizService
     {
         Task<ResponseVM> GenerateQuizAsync(QuizVM model);
+        Task<ResponseVM> GetAllQuizQuestionsAsync(long quizId);
+        //Task<ResponseVM> GetQuizAsync(int quizId);
+
+
+
     }
 }

@@ -38,40 +38,23 @@ namespace Infrastructure.Services.User
             _wasabiService = wasabiService;
         }
 
-
-        public ResponseVM GetUser()
+        public async Task<ResponseVM> GetUser()
         {
             ResponseVM response = ResponseVM.Instance;
 
             try
             {
-                
-
-                //if (string.IsNullOrEmpty(tokenEmail) && tokenUserId == null)
-                //{
-                //    response.StatusCode = ResponseCode.Unauthorized;
-                //    response.ErrorMessage = "Invalid Token";
-                //    return response;
-                //}
-
                 var parameters = new DynamicParameters();
-               // parameters.Add("@Email", _tokenService.Email);
                 parameters.Add("@UserID", _tokenService.UserID);
 
-                var users = Methods.ExecuteStoredProceduresList("SP_GetUser", parameters);
+                var users = await Methods.ExecuteStoredProceduresList("SP_GetUser", parameters);
 
-                if (users == null || !users.Result.Any())
+                if (users == null || !users.Any())
                 {
                     response.StatusCode = ResponseCode.NotFound;
                     response.ErrorMessage = "User does not exist.";
                     return response;
                 }
-
-                //dynamic firstUser = users.Result.First();
-                //var userJson = JsonSerializer.Serialize(firstUser);
-                //var userEntity = JsonSerializer.Deserialize<Domain.Models.Entities.Users.User>(userJson)!;
-
-                //UserDTO userDTO = UserMapper.MapToDTO(users.Result);
 
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = "User fetched successfully.";
@@ -85,6 +68,53 @@ namespace Infrastructure.Services.User
 
             return response;
         }
+
+        //public ResponseVM GetUser()
+        //{
+        //    ResponseVM response = ResponseVM.Instance;
+
+        //    try
+        //    {
+                
+
+        //        //if (string.IsNullOrEmpty(tokenEmail) && tokenUserId == null)
+        //        //{
+        //        //    response.StatusCode = ResponseCode.Unauthorized;
+        //        //    response.ErrorMessage = "Invalid Token";
+        //        //    return response;
+        //        //}
+
+        //        var parameters = new DynamicParameters();
+        //       // parameters.Add("@Email", _tokenService.Email);
+        //        parameters.Add("@UserID", _tokenService.UserID);
+
+        //        var users = Methods.ExecuteStoredProceduresList("SP_GetUser", parameters);
+
+        //        if (users == null || !users.Result.Any())
+        //        {
+        //            response.StatusCode = ResponseCode.NotFound;
+        //            response.ErrorMessage = "User does not exist.";
+        //            return response;
+        //        }
+
+        //        //dynamic firstUser = users.Result.First();
+        //        //var userJson = JsonSerializer.Serialize(firstUser);
+        //        //var userEntity = JsonSerializer.Deserialize<Domain.Models.Entities.Users.User>(userJson)!;
+
+        //        //UserDTO userDTO = UserMapper.MapToDTO(users.Result);
+
+        //        response.StatusCode = ResponseCode.Success;
+        //        response.ResponseMessage = "User fetched successfully.";
+        //        response.Data = users;
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        response.StatusCode = ResponseCode.InternalServerError;
+        //        response.ErrorMessage = "An error occurred while retrieving the user." + e;
+        //    }
+
+        //    return response;
+        //}
 
         public ResponseVM ChangePassword(ChangePasswordVM user)
         {

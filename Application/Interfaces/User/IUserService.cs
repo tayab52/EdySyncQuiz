@@ -5,7 +5,7 @@ namespace Application.Interfaces.User
 {
     public interface IUserService
     {
-        ResponseVM GetUser();
+        Task<ResponseVM> GetUser();
         ResponseVM ChangePassword(ChangePasswordVM user);
         ResponseVM DeleteUser();
         ResponseVM UpdateUser(UserDTO user);

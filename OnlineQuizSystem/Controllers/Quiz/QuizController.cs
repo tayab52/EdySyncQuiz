@@ -21,5 +21,15 @@ namespace PresentationAPI.Controllers.Quiz
             var result = await quizService.GenerateQuizAsync(model);
             return Ok(result);
         }
+
+        [HttpGet("quiz/{quizId:long}/questions")]
+        public async Task<IActionResult> GetAllQuizQuestions(long quizId)
+        {
+            var result = await quizService.GetAllQuizQuestionsAsync(quizId);
+            if (result.Data == null)
+                return NotFound(result);
+            return Ok(result);
+        }
+
     }
 }

@@ -14,11 +14,10 @@ namespace PresentationAPI.Controllers.User
     {
         // /api/user 
         [HttpGet]
-        public IActionResult GetUser() // Requires a Valid Token
-        { // User must be logged in, and can only accesss their own account
-            ResponseVM response;
-
-            response = userService.GetUser();
+        public async Task<IActionResult> GetUser() 
+        {
+            // User must be logged in, and can only access their own account
+            var response = await userService.GetUser();
 
             if (response.StatusCode == ResponseCode.NotFound ||
                 response.StatusCode == ResponseCode.Unauthorized ||
