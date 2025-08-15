@@ -11,6 +11,9 @@ using Application.Interfaces.Gemini;
 using Infrastructure.Context;
 using Microsoft.EntityFrameworkCore;
 using Infrastructure.Services.Token;
+using CommonOperations.Methods;
+using Dapper;
+using Azure;
 
 namespace Infrastructure.Services.Gemini
 {
@@ -231,50 +234,91 @@ namespace Infrastructure.Services.Gemini
             }
         }
 
+        public async Task<ResponseVM> GetQuizQuestionsByNumberAsync(long quizID, int QuestionNumber)
+        {
+                ResponseVM response = ResponseVM.Instance;
+            try
+            {
+                var parameteres = new DynamicParameters();
+                parameteres.Add("@QuizID", quizID);
+                parameteres.Add("@QuestionNumber", QuestionNumber);
+                // Call the stored procedure using your shared Methods class
+                var result = await Methods.ExecuteStoredProceduresList("SP_GetQuizQuestionByNumber", parameteres);
+
+                QuizQuestionVM? questionVM = null;
+
+                foreach (var row in result)
+                {
+                    if (questionVM == null)
+                    {
+                        questionVM = new QuizQuestionVM
+                        {
+                            Question = row.QuestionText,
+                            Explanation = row.Explanation,
+                            Options = new List<QuizOptionVM>()
+                        };
+                    }
+                    questionVM.Options.Add(new QuizOptionVM
+                    {
+                        OptionText = row.OptionText,
+                        IsCorrect = row.IsCorrect
+                    });
+                }
+                if (questionVM == null)
+                {
+                    response.StatusCode = 404;
+                    response.ResponseMessage = "Question not found.";
+                    return response;
+                }
+                else
+                {
+                    response.StatusCode = 200;
+                    response.ResponseMessage = "Question fetched successfully.";
+                    response.Data = questionVM;
+                }
+            }
+            catch (Exception ex)
+            {
+                response.StatusCode = 500;
+                response.ErrorMessage = "Error: " + ex.Message;
+            }
+            return response;
+
+        }
+
         public async Task<ResponseVM> GetAllQuizQuestionsAsync(long quizId)
         {
             ResponseVM response = ResponseVM.Instance;
+            var parameters = new DynamicParameters();
+            parameters.Add("@QuizID", quizId);
+
+            // Call the stored procedure using your shared Methods class
+            var result = await Methods.ExecuteStoredProceduresList("SP_GetAllQuizQuestions", parameters);
+
+            // Map the flat result to your VMs
             var questionsDict = new Dictionary<long, QuizQuestionVM>();
             var questionsList = new List<QuizQuestionVM>();
 
-            using (var conn = _dbContext.Database.GetDbConnection())
+            foreach (var row in result)
             {
-                await conn.OpenAsync();
-                using (var cmd = conn.CreateCommand())
+                long questionId = row.QuestionId;
+                if (!questionsDict.TryGetValue(questionId, out var questionVM))
                 {
-                    cmd.CommandText = "SP_GetAllQuizQuestions";
-                    cmd.CommandType = System.Data.CommandType.StoredProcedure;
-
-                    var param = cmd.CreateParameter();
-                    param.ParameterName = "@QuizID";
-                    param.Value = quizId;
-                    cmd.Parameters.Add(param);
-
-                    using (var reader = await cmd.ExecuteReaderAsync())
+                    questionVM = new QuizQuestionVM
                     {
-                        while (await reader.ReadAsync())
-                        {
-                            var questionId = reader.GetInt64(reader.GetOrdinal("QuestionId"));
-                            if (!questionsDict.TryGetValue(questionId, out var questionVM))
-                            {
-                                questionVM = new QuizQuestionVM
-                                {
-                                    Question = reader.GetString(reader.GetOrdinal("QuestionText")),
-                                    Explanation = reader.GetString(reader.GetOrdinal("Explanation")),
-                                    Options = new List<QuizOptionVM>()
-                                };
-                                questionsDict[questionId] = questionVM;
-                                questionsList.Add(questionVM);
-                            }
-
-                            questionVM.Options.Add(new QuizOptionVM
-                            {
-                                OptionText = reader.GetString(reader.GetOrdinal("OptionText")),
-                                IsCorrect = reader.GetBoolean(reader.GetOrdinal("IsCorrect"))
-                            });
-                        }
-                    }
+                        Question = row.QuestionText,
+                        Explanation = row.Explanation,
+                        Options = new List<QuizOptionVM>()
+                    };
+                    questionsDict[questionId] = questionVM;
+                    questionsList.Add(questionVM);
                 }
+
+                questionVM.Options.Add(new QuizOptionVM
+                {
+                    OptionText = row.OptionText,
+                    IsCorrect = row.IsCorrect
+                });
             }
 
             response.StatusCode = 200;
@@ -282,6 +326,58 @@ namespace Infrastructure.Services.Gemini
             response.Data = questionsList;
             return response;
         }
+
+        //public async Task<ResponseVM> GetAllQuizQuestionsAsync(long quizId)
+        //{
+        //    ResponseVM response = ResponseVM.Instance;
+        //    var questionsDict = new Dictionary<long, QuizQuestionVM>();
+        //    var questionsList = new List<QuizQuestionVM>();
+
+        //    using (var conn = _dbContext.Database.GetDbConnection())
+        //    {
+        //        await conn.OpenAsync();
+        //        using (var cmd = conn.CreateCommand())
+        //        {
+        //            cmd.CommandText = "SP_GetAllQuizQuestions";
+        //            cmd.CommandType = System.Data.CommandType.StoredProcedure;
+
+        //            var param = cmd.CreateParameter();
+        //            param.ParameterName = "@QuizID";
+        //            param.Value = quizId;
+        //            cmd.Parameters.Add(param);
+
+        //            using (var reader = await cmd.ExecuteReaderAsync())
+        //            {
+        //                while (await reader.ReadAsync())
+        //                {
+        //                    var questionId = reader.GetInt64(reader.GetOrdinal("QuestionId"));
+        //                    if (!questionsDict.TryGetValue(questionId, out var questionVM))
+        //                    {
+        //                        questionVM = new QuizQuestionVM
+        //                        {
+        //                            Question = reader.GetString(reader.GetOrdinal("QuestionText")),
+        //                            Explanation = reader.GetString(reader.GetOrdinal("Explanation")),
+        //                            Options = new List<QuizOptionVM>()
+        //                        };
+        //                        questionsDict[questionId] = questionVM;
+        //                        questionsList.Add(questionVM);
+        //                    }
+
+        //                    questionVM.Options.Add(new QuizOptionVM
+        //                    {
+        //                        OptionText = reader.GetString(reader.GetOrdinal("OptionText")),
+        //                        IsCorrect = reader.GetBoolean(reader.GetOrdinal("IsCorrect"))
+        //                    });
+        //                }
+        //            }
+        //        }
+        //    }
+
+        //    response.StatusCode = 200;
+        //    response.ResponseMessage = "All questions fetched successfully.";
+        //    response.Data = questionsList;
+        //    return response;
+        //}
 
         private string CleanJsonResponse(string? jsonResponse)
         {

@@ -30,6 +30,15 @@ namespace PresentationAPI.Controllers.Quiz
                 return NotFound(result);
             return Ok(result);
         }
+        [HttpGet("quiz/{quizId:long}/questions/{questionNumber:int}")]
 
+        public async Task<IActionResult> GetQuizQuestionsByNumber(long quizId, int questionNumber)
+        {
+            var result = await quizService.GetQuizQuestionsByNumberAsync(quizId, questionNumber);
+            if (result.Data == null)
+                return NotFound(result);
+            return Ok(result);
+
+        }
     }
 }
