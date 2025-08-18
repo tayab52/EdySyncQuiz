@@ -20,5 +20,10 @@ namespace Domain.Models.Entities.Quiz
         public int? TotalQuestions { get; set; } = 0;
         public bool IsCompleted { get; set; } = false;
         public long UserID { get; set; }
+
+        public int CorrectQuestionCount { get; set; } = 0;
+        public int IncorrectQuestionCount { get; set; } = 0;
+        public int TotalScore { get; set; } = 0;
+        public int ObtainedScore { get; set; } = 0;
     }
 }

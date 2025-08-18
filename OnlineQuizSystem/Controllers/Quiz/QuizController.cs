@@ -14,8 +14,8 @@ namespace PresentationAPI.Controllers.Quiz
     [Authorize]
     public class QuizController(IQuizService quizService) : ControllerBase
     {
-        [HttpPost("generate")]
-        public async Task<IActionResult> GenerateQuiz([FromBody] QuizVM model)
+        [HttpGet("generate")]
+        public async Task<IActionResult> GenerateQuiz([FromQuery] QuizVM model)
         {
 
             var result = await quizService.GenerateQuizAsync(model);

@@ -126,7 +126,7 @@ namespace Infrastructure.Services.Gemini
                 var quizJson = parts[0].GetProperty("text").GetString();
                 Console.WriteLine($"Extracted Quiz JSON: {quizJson}"); // DEBUG
 
-                quizJson = CleanJsonResponse(quizJson);
+                quizJson = Methods.CleanJsonResponse(quizJson);
                 Console.WriteLine($"Cleaned Quiz JSON: {quizJson}"); // DEBUG
 
                 var quizItems = JsonSerializer.Deserialize<List<GeminiResponseVM>>(quizJson, new JsonSerializerOptions
@@ -194,37 +194,19 @@ namespace Infrastructure.Services.Gemini
                 }
                 _dbContext.Options.AddRange(options);
                 await _dbContext.SaveChangesAsync();
-                //var quizList = new List<QuizQuestionVM>();
+                // Fetch all questions for the newly created quiz
+                var allQuestionsResponse = await GetAllQuizQuestionsAsync(quiz.ID);
 
-                //foreach (var item in quizItems)
-                //{
-                //    var quiz = new QuizQuestionVM
-                //    {
-                //        Question = item.question,
-                //        Explanation = item.explanation ?? "",
-                //        Options = new List<QuizOptionVM>()
-                //    };
+                // Optionally, you can set a custom message or status code here
+                allQuestionsResponse.ResponseMessage = "Quiz generated and fetched successfully.";
+                allQuestionsResponse.StatusCode = 200;
 
-                //    foreach (var opt in item.options)
-                //    {
-                //        bool isCorrect = string.Equals(
-                //            opt.Trim(),
-                //            item.correctOption.Trim(),
-                //            StringComparison.OrdinalIgnoreCase
-                //        );
+                return allQuestionsResponse;
 
-                //        quiz.Options.Add(new QuizOptionVM
-                //        {
-                //            OptionText = opt,
-                //            IsCorrect = isCorrect
-                //        });
-                //    }
 
-                //    quizList.Add(quiz);
-                //}
-                response.ResponseMessage = "Question Generated Successfully";
-                response.StatusCode = 200;
-                return (response);
+                //response.ResponseMessage = "Question Generated Successfully";
+                //response.StatusCode = 200;
+                //return (response);
             }
             catch (Exception ex)
             {
@@ -234,6 +216,83 @@ namespace Infrastructure.Services.Gemini
             }
         }
 
+        public async Task<ResponseVM> GetAllQuizQuestionsAsync(long quizId)
+        {
+            ResponseVM response = ResponseVM.Instance;
+            var parameters = new DynamicParameters();
+            parameters.Add("@QuizID", quizId);
+
+            // Call the stored procedure using your shared Methods class
+            var result = await Methods.ExecuteStoredProceduresList("SP_GetAllQuizQuestions", parameters);
+
+            // Map the flat result to your VMs
+            var questionsDict = new Dictionary<long, QuizQuestionVM>();
+            var questionsList = new List<QuizQuestionVM>();
+            var quizDetail = new QuizDetailVM();
+
+            string topic = "";
+            int totalQuestions =0;
+
+
+            foreach (var row in result)
+            {
+                long questionId = row.QuestionId;
+                if (!questionsDict.TryGetValue(questionId, out var questionVM))
+                {
+
+                    questionVM = new QuizQuestionVM
+                    {
+                        QuestionID = questionId,
+                        Question = row.QuestionText,
+                        Explanation = row.Explanation,
+                        Options = new List<QuizOptionVM>()
+                    };
+                    questionsDict[questionId] = questionVM;
+                    questionsList.Add(questionVM);
+                }
+
+                questionVM.Options.Add(new QuizOptionVM
+                {
+                    OptionText = row.OptionText,
+                    IsCorrect = row.IsCorrect
+                });
+
+                // Get topic and total questions from the first row if i get from the stored Procedure 
+                //if (string.IsNullOrEmpty(topic) && row.Topic != null)
+                //{
+                //    topic = row.Topic;
+                //}
+
+                //if (row.TotalQuestions != null)
+                //{
+                //    totalQuestion = row.TotalQuestions.Value;
+                //}
+
+                if (string.IsNullOrEmpty(topic) || totalQuestions == 0)
+                {
+                    var quiz = await _dbContext.Quizzes.FirstOrDefaultAsync(q => q.ID == quizId);
+                    if (quiz != null)
+                    {
+                        topic = quiz.Topic;
+                        totalQuestions = quiz.TotalQuestions ?? questionsList.Count;
+                    }
+                }
+                quizDetail = new QuizDetailVM
+                {
+                    QuizID = quizId,
+                    Topic = topic,
+                    NoOfQuestions = totalQuestions,
+                    Questions = questionsList
+                };
+
+
+            }
+                response.StatusCode = 200;
+                response.ResponseMessage = "All questions fetched successfully.";
+                response.Data = quizDetail;
+                return response;
+
+        }
         public async Task<ResponseVM> GetQuizQuestionsByNumberAsync(long quizID, int QuestionNumber)
         {
                 ResponseVM response = ResponseVM.Instance;
@@ -286,122 +345,6 @@ namespace Infrastructure.Services.Gemini
 
         }
 
-        public async Task<ResponseVM> GetAllQuizQuestionsAsync(long quizId)
-        {
-            ResponseVM response = ResponseVM.Instance;
-            var parameters = new DynamicParameters();
-            parameters.Add("@QuizID", quizId);
 
-            // Call the stored procedure using your shared Methods class
-            var result = await Methods.ExecuteStoredProceduresList("SP_GetAllQuizQuestions", parameters);
-
-            // Map the flat result to your VMs
-            var questionsDict = new Dictionary<long, QuizQuestionVM>();
-            var questionsList = new List<QuizQuestionVM>();
-
-            foreach (var row in result)
-            {
-                long questionId = row.QuestionId;
-                if (!questionsDict.TryGetValue(questionId, out var questionVM))
-                {
-                    questionVM = new QuizQuestionVM
-                    {
-                        Question = row.QuestionText,
-                        Explanation = row.Explanation,
-                        Options = new List<QuizOptionVM>()
-                    };
-                    questionsDict[questionId] = questionVM;
-                    questionsList.Add(questionVM);
-                }
-
-                questionVM.Options.Add(new QuizOptionVM
-                {
-                    OptionText = row.OptionText,
-                    IsCorrect = row.IsCorrect
-                });
-            }
-
-            response.StatusCode = 200;
-            response.ResponseMessage = "All questions fetched successfully.";
-            response.Data = questionsList;
-            return response;
-        }
-
-        //public async Task<ResponseVM> GetAllQuizQuestionsAsync(long quizId)
-        //{
-        //    ResponseVM response = ResponseVM.Instance;
-        //    var questionsDict = new Dictionary<long, QuizQuestionVM>();
-        //    var questionsList = new List<QuizQuestionVM>();
-
-        //    using (var conn = _dbContext.Database.GetDbConnection())
-        //    {
-        //        await conn.OpenAsync();
-        //        using (var cmd = conn.CreateCommand())
-        //        {
-        //            cmd.CommandText = "SP_GetAllQuizQuestions";
-        //            cmd.CommandType = System.Data.CommandType.StoredProcedure;
-
-        //            var param = cmd.CreateParameter();
-        //            param.ParameterName = "@QuizID";
-        //            param.Value = quizId;
-        //            cmd.Parameters.Add(param);
-
-        //            using (var reader = await cmd.ExecuteReaderAsync())
-        //            {
-        //                while (await reader.ReadAsync())
-        //                {
-        //                    var questionId = reader.GetInt64(reader.GetOrdinal("QuestionId"));
-        //                    if (!questionsDict.TryGetValue(questionId, out var questionVM))
-        //                    {
-        //                        questionVM = new QuizQuestionVM
-        //                        {
-        //                            Question = reader.GetString(reader.GetOrdinal("QuestionText")),
-        //                            Explanation = reader.GetString(reader.GetOrdinal("Explanation")),
-        //                            Options = new List<QuizOptionVM>()
-        //                        };
-        //                        questionsDict[questionId] = questionVM;
-        //                        questionsList.Add(questionVM);
-        //                    }
-
-        //                    questionVM.Options.Add(new QuizOptionVM
-        //                    {
-        //                        OptionText = reader.GetString(reader.GetOrdinal("OptionText")),
-        //                        IsCorrect = reader.GetBoolean(reader.GetOrdinal("IsCorrect"))
-        //                    });
-        //                }
-        //            }
-        //        }
-        //    }
-
-        //    response.StatusCode = 200;
-        //    response.ResponseMessage = "All questions fetched successfully.";
-        //    response.Data = questionsList;
-        //    return response;
-        //}
-
-        private string CleanJsonResponse(string? jsonResponse)
-        {
-            if (string.IsNullOrEmpty(jsonResponse))
-                return "[]";
-
-            var cleaned = jsonResponse.Trim().Trim('`');
-
-            if (cleaned.StartsWith("json", StringComparison.OrdinalIgnoreCase))
-            {
-                cleaned = cleaned.Substring(4).Trim();
-            }
-
-            if (cleaned.StartsWith("```json", StringComparison.OrdinalIgnoreCase))
-            {
-                cleaned = cleaned.Substring(7).Trim();
-            }
-
-            if (cleaned.EndsWith("```"))
-            {
-                cleaned = cleaned.Substring(0, cleaned.Length - 3).Trim();
-            }
-
-            return cleaned;
-        }
     }
 }

@@ -8,6 +8,31 @@ namespace CommonOperations.Methods
 {
     public class Methods
     {
+
+        public static string CleanJsonResponse(string? jsonResponse)
+        {
+            if (string.IsNullOrEmpty(jsonResponse))
+                return "[]";
+
+            var cleaned = jsonResponse.Trim().Trim('`');
+
+            if (cleaned.StartsWith("json", StringComparison.OrdinalIgnoreCase))
+            {
+                cleaned = cleaned.Substring(4).Trim();
+            }
+
+            if (cleaned.StartsWith("```json", StringComparison.OrdinalIgnoreCase))
+            {
+                cleaned = cleaned.Substring(7).Trim();
+            }
+
+            if (cleaned.EndsWith("```"))
+            {
+                cleaned = cleaned.Substring(0, cleaned.Length - 3).Trim();
+            }
+
+            return cleaned;
+        }
         public static long GenerateOTP()
         {
             var random = new Random();
@@ -99,6 +124,8 @@ namespace CommonOperations.Methods
             };
         }
 
+
+
         private static string GetImageExtensionFromBytes(byte[] bytes)
         {
             if (bytes.Length < 4) return "unknown";
@@ -112,5 +139,8 @@ namespace CommonOperations.Methods
 
             return "unknown";
         }
+
+
+
     }
 }
