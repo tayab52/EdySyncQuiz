@@ -75,28 +75,6 @@ namespace Infrastructure.Services.Gemini
                 _dbContext.Questions.UpdateRange(questions);
 
                 await _dbContext.SaveChangesAsync();
-
-
-
-
-                // Store the answers
-                //foreach (var answer in model.Answers)
-                //{
-                //    var question = await _dbContext.Questions
-                //        .FirstOrDefaultAsync(q => q.ID == answer.QuestionID && q.QuizID == quiz.ID);
-                //    if (question != null)
-                //    {
-                //        var newAnswer = new Answer
-                //        {
-                //            QuestionID = question.ID,
-                //            UserID = user.UserID,
-                //            SelectedOptionText = answer.SelectedOptionText,
-                //            IsCorrect = answer.IsCorrect
-                //        };
-                //        _dbContext.Answers.Add(newAnswer);
-                //    }
-                //}
-                //await _dbContext.SaveChangesAsync();
                 response.StatusCode = 200;
                 response.ResponseMessage = "Results submitted successfully.";
             }
