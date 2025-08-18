@@ -35,6 +35,80 @@ namespace Infrastructure.Services.Gemini
 
         }
 
+        public async Task<ResponseVM> ResultSubmittedAsync(ResultSubmittedVM model)
+        {
+            ResponseVM response = ResponseVM.Instance;
+            try
+            {
+                var user = await _dbContext.Users
+                    .FirstOrDefaultAsync(u => u.UserID == _tokenService.UserID);
+                if (user == null)
+                {
+                    response.StatusCode = 404;
+                    response.ErrorMessage = "User not found.";
+                    return response;
+                }
+                var quiz = await _dbContext.Quizzes
+                    .FirstOrDefaultAsync(q => q.ID == model.QuizID && q.UserID == user.UserID);
+                if (quiz == null)
+                {
+                    response.StatusCode = 404;
+                    response.ErrorMessage = "Quiz not found.";
+                    return response;
+                }
+                //1. Update quiz completion status
+                quiz.IsCompleted = true;
+                quiz.CorrectQuestionCount = model.NoOfCorrectQuestions;
+                quiz.IncorrectQuestionCount = model.NoOfIncorrectQuestions;
+                quiz.TotalScore = model.TotalScore;
+                quiz.ObtainedScore = model.ObtainedScore;
+                _dbContext.Quizzes.UpdateRange(quiz);
+
+               //2. Update Questions 
+               var questions = await _dbContext.Questions
+                    .Where(q => q.QuizID == quiz.ID)
+                    .ToListAsync();
+                foreach (var question in questions)
+                {
+                    question.IsCorrect = model.CorrectQuestionIds.Contains(question.ID);
+                }
+                _dbContext.Questions.UpdateRange(questions);
+
+                await _dbContext.SaveChangesAsync();
+
+
+
+
+                // Store the answers
+                //foreach (var answer in model.Answers)
+                //{
+                //    var question = await _dbContext.Questions
+                //        .FirstOrDefaultAsync(q => q.ID == answer.QuestionID && q.QuizID == quiz.ID);
+                //    if (question != null)
+                //    {
+                //        var newAnswer = new Answer
+                //        {
+                //            QuestionID = question.ID,
+                //            UserID = user.UserID,
+                //            SelectedOptionText = answer.SelectedOptionText,
+                //            IsCorrect = answer.IsCorrect
+                //        };
+                //        _dbContext.Answers.Add(newAnswer);
+                //    }
+                //}
+                //await _dbContext.SaveChangesAsync();
+                response.StatusCode = 200;
+                response.ResponseMessage = "Results submitted successfully.";
+            }
+            catch (Exception ex)
+            {
+                response.StatusCode = 500;
+                response.ErrorMessage = $"Error: {ex.Message}";
+            }
+            return response;
+
+        }
+
         public async Task<ResponseVM> GenerateQuizAsync(QuizVM model)
         {
             ResponseVM response = ResponseVM.Instance;
