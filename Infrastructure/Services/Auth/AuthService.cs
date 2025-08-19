@@ -311,58 +311,6 @@ namespace Infrastructure.Services.Auth
                 return response;
             }
         }
-        //public ResponseVM ResendOTP(string email, string? operation = "resend-otp")
-        //{
-        //    ResponseVM response = ResponseVM.Instance;
-        //    var normalizedEmail = email.Trim().ToLowerInvariant();
-        //    var user = _appDBContext.Users.FirstOrDefault(u => u.Email.Contains(email, StringComparison.CurrentCultureIgnoreCase));
-
-        //    if (user == null)
-        //    {
-        //        response.ErrorMessage = "User not found.";
-        //        response.StatusCode = ResponseCode.NotFound;
-        //        return response;
-        //    }
-        //    if (user.IsActive && operation != "forgot-password")
-        //    {
-        //        response.StatusCode = ResponseCode.BadRequest;
-        //        response.ErrorMessage = "User is already active. No need to resend OTP.";
-        //        return response;
-        //    }
-
-        //    string subject = operation == "forgot-password" ? "Reset OTP for TopicTap account" : "Resend OTP for TopicTap";
-        //    var otpResponse = SendOTP(email, subject);
-
-        //    if (otpResponse.StatusCode != ResponseCode.Success)
-        //        return otpResponse;
-
-        //    if (otpResponse.Data is not long otp)
-        //    {
-        //        response.StatusCode = ResponseCode.BadRequest;
-        //        response.ErrorMessage = "Invalid OTP value returned.";
-        //        return response;
-        //    }
-
-        //    user.OTP = otp;
-        //    user.OTPExpiry = DateTime.UtcNow.AddMinutes(60);
-
-        //    try
-        //    {
-        //        _appDBContext.SaveChanges();
-        //        response.StatusCode = ResponseCode.Success;
-        //        response.ResponseMessage = operation == "forgot-password"
-        //                                            ? "OTP to reset account sent successfully"
-        //                                            : "OTP resent successfully.";
-        //        return response;
-        //    }
-        //    catch
-        //    {
-        //        response.StatusCode = ResponseCode.BadRequest;
-        //        response.ErrorMessage = "Failed to update user OTP.";
-        //        return response;
-        //    }
-        //}
-
         public ResponseVM VerifyOTP(string email, long otp)
         {
             ResponseVM response = ResponseVM.Instance;
