@@ -35,6 +35,108 @@ namespace Infrastructure.Services.Gemini
 
         }
 
+        public async Task<ResponseVM> GetQuizHistoryAsync()
+        {
+            ResponseVM response = ResponseVM.Instance;
+            try
+            {
+                var parameter = new DynamicParameters();
+                parameter.Add("@UserID", _tokenService.UserID);
+                // Call the stored procedure using your shared Methods class
+                var result = await Methods.ExecuteStoredProceduresList("SP_GetQuizHistory", parameter);
+                if (result == null || !result.Any())
+                {
+                    response.StatusCode = 404;
+                    response.ErrorMessage = "No quiz history found for this user.";
+                    return response;
+                }
+
+                var quizList = result.Select(row => new QuizHistoryItemVM
+                {
+
+                    QuizID = row.QuizID,
+                    Topic = row.Topic,
+                    TotalScore = row.TotalScore,
+                    ObtainedScore = row.ObtainedScore,
+                    UpdatedDate = row.UpdatedDate,
+                }).ToList();
+
+                // Calculate summary
+                var totalQuizzes = quizList.Count;
+                var totalScore = result.Sum(row => (int)row.TotalScore);
+                var obtainedScore = result.Sum(row => (int)row.ObtainedScore);
+
+                // Prepare final VM
+                var quizHistoryVM = new QuizHistoryVM
+                {
+                    TotalQuizzes = totalQuizzes,
+                    TotalScore = totalScore,
+                    ObtainedScore = obtainedScore,
+                    Quizzes = quizList
+                };
+
+                response.StatusCode = 200;
+                response.ResponseMessage = "Quiz history fetched successfully.";
+                response.Data = quizHistoryVM;
+            }
+            catch (Exception ex)
+            {
+                response.StatusCode = 500;
+                response.ErrorMessage = $"Error: {ex.Message}";
+            }
+            return response;
+        }
+
+
+
+        //public async Task<ResponseVM> GetQuizHistoryAsync()
+        //{
+        //    ResponseVM response = ResponseVM.Instance;
+        //    try
+        //    {
+        //        var user = await _dbContext.Users
+        //            .FirstOrDefaultAsync(u => u.UserID == _tokenService.UserID);
+        //        if (user == null)
+        //        {
+        //            response.StatusCode = 404;
+        //            response.ErrorMessage = "User not found.";
+        //            return response;
+        //        }
+        //        var quizzes = await _dbContext.Quizzes
+        //            .Where(q => q.UserID == user.UserID)
+        //            .OrderByDescending(q => q.AddedDate)
+        //            .ToListAsync();
+        //        if (quizzes == null || !quizzes.Any())
+        //        {
+        //            response.StatusCode = 404;
+        //            response.ErrorMessage = "No quizzes found for this user.";
+        //            return response;
+        //        }
+        //        var quizHistory = quizzes.Select(q => new QuizHistoryVM
+        //        {
+        //            QuizID = q.ID,
+        //            Topic = q.Topic,
+        //            SubTopic = q.SubTopic,
+        //            TotalQuestions = q.TotalQuestions ?? 0,
+        //            CorrectQuestionCount = q.CorrectQuestionCount ?? 0,
+        //            IncorrectQuestionCount = q.IncorrectQuestionCount ?? 0,
+        //            ObtainedScore = q.ObtainedScore ?? 0,
+        //            TotalScore = q.TotalScore ?? 0,
+        //            IsCompleted = q.IsCompleted,
+        //            AddedDate = q.AddedDate
+        //        }).ToList();
+        //        response.StatusCode = 200;
+        //        response.ResponseMessage = "Quiz history fetched successfully.";
+        //        response.Data = quizHistory;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        response.StatusCode = 500;
+        //        response.ErrorMessage = $"Error: {ex.Message}";
+        //    }
+        //    return response;
+
+            //}
 
         public async Task<ResponseVM> GenerateQuizAsync(QuizVM model)
         {
@@ -316,7 +418,7 @@ namespace Infrastructure.Services.Gemini
                     response.ErrorMessage = "Quiz not found.";
                     return response;
                 }
-                //1. Update quiz completion status
+                //1. Update quiz 
                 quiz.IsCompleted = true;
                 quiz.CorrectQuestionCount = model.NoOfCorrectQuestions;
                 quiz.IncorrectQuestionCount = model.NoOfIncorrectQuestions;

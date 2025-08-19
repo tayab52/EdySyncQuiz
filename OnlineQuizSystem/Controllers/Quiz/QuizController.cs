@@ -54,5 +54,14 @@ namespace PresentationAPI.Controllers.Quiz
             return Ok(result);
 
         }
+
+        [HttpGet("history")]
+        public async Task<IActionResult> GetQuizHistory()
+        {
+            var result = await quizService.GetQuizHistoryAsync();
+            if (result.Data == null)
+                return NotFound(result);
+            return Ok(result);
+        }
     }
 }
