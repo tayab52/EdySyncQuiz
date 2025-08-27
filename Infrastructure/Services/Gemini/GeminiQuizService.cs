@@ -35,6 +35,55 @@ namespace Infrastructure.Services.Gemini
 
         }
 
+        public async Task<ResponseVM> GetQuizDetailsAsync(long QuizID)
+        {
+            ResponseVM response = ResponseVM.Instance;
+            try
+            {
+                var parameter = new DynamicParameters();
+                parameter.Add("@QuizID", QuizID);
+                // Call the stored procedure using your shared Methods class
+                var result = await Methods.ExecuteStoredProceduresList("SP_GetQuizDetails", parameter);
+                if (result == null || !result.Any())
+                {
+                    response.StatusCode = 404;
+                    response.ErrorMessage = "No quiz details found for this quiz.";
+                    return response;
+                }
+                var questions =result.Select(row=> new APIQuizDetailsItemsVM
+                {
+                    QuestionID = row.QuestionID ?? 0,
+                    QuestionText = row.QuestionText,
+                    Explanation = row.Explanation,
+                    IsCorrect = row.IsCorrect
+                }).ToList();
+
+                var firstRow = result.First();
+                int totalScore = (int)result.First().TotalScore;
+                int obtainedScore = (int)result.First().ObtainedScore;
+
+                var QuizDetails = new APIQuizDetailsVM
+                {
+                    Topic = firstRow.Topic,
+                    UpdatedDate = firstRow.UpdatedDate,
+                    TotalQuestions =questions.Count,
+                    TotalScore = totalScore,
+                    ObtainedScore = obtainedScore,
+                    Questions = questions
+                };
+
+                response.StatusCode = 200;
+                response.ResponseMessage = "Quiz details fetched successfully.";
+                response.Data = QuizDetails;
+            }
+            catch (Exception ex)
+            {
+                response.StatusCode = 500;
+                response.ErrorMessage = $"Error: {ex.Message}";
+            }
+            return response;
+        }
+
         public async Task<ResponseVM> GetQuizHistoryAsync()
         {
             ResponseVM response = ResponseVM.Instance;
@@ -450,6 +499,8 @@ namespace Infrastructure.Services.Gemini
             return response;
 
         }
+
+
 
 
     }

@@ -55,12 +55,21 @@ namespace PresentationAPI.Controllers.Quiz
 
         }
 
-        [HttpGet("history")]
+        [HttpGet("Quizhistory")]
         public async Task<IActionResult> GetQuizHistory()
         {
             var result = await quizService.GetQuizHistoryAsync();
             if (result.Data == null)
                 return NotFound(result);
+            return Ok(result);
+        }
+
+        [HttpGet("Quizdetails")]
+        public async Task<IActionResult> GetQuizDetails(long quizId)
+        {
+            var result = await quizService.GetQuizDetailsAsync(quizId);
+            if (result == null)
+                return NotFound("Quiz not found or has no questions.");
             return Ok(result);
         }
     }

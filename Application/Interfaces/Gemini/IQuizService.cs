@@ -18,6 +18,7 @@ namespace Application.Interfaces.Gemini
         Task<ResponseVM> ResultSubmittedAsync(ResultSubmittedVM model);
 
         Task<ResponseVM> GetQuizHistoryAsync();
+        Task<ResponseVM> GetQuizDetailsAsync(long quizId);
 
 
     }
