@@ -10,8 +10,10 @@ namespace Application.Interfaces.Gemini
 {
     public interface IQuizService
     {
-        Task<ResponseVM> GenerateQuizAsync(QuizVM model);
-        Task<ResponseVM> GetAllQuizQuestionsAsync(long quizId);
+        ResponseVM GenerateQuiz(QuizVM model);
+        ResponseVM GetAllQuizQuestions(long quizId);
+        //Task<ResponseVM> GenerateQuizAsync(QuizVM model);
+        //Task<ResponseVM> GetAllQuizQuestionsAsync(long quizId);
 
         Task<ResponseVM> GetQuizQuestionsByNumberAsync(long quizId, int questionNumber);
         ResponseVM ResultSubmitted(ResultSubmittedVM model);
