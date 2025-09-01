@@ -40,20 +40,30 @@ namespace PresentationAPI.Controllers.Quiz
             return Ok(result);
 
         }
-
         [HttpPost("resultSubmitted")]
-
-        public async Task<IActionResult> ResultSubmitted([FromBody] ResultSubmittedVM model)
+        public IActionResult ResultSubmitted([FromBody] ResultSubmittedVM model)
         {
             if (model == null)
             {
                 return BadRequest("Invalid result submission data.");
             }
-            var result = await quizService.ResultSubmittedAsync(model);
-
+            var result = quizService.ResultSubmitted(model);
             return Ok(result);
-
         }
+
+        //[HttpPost("resultSubmitted")]
+
+        //public async Task<IActionResult> ResultSubmitted([FromBody] ResultSubmittedVM model)
+        //{
+        //    if (model == null)
+        //    {
+        //        return BadRequest("Invalid result submission data.");
+        //    }
+        //    var result = await quizService.ResultSubmittedAsync(model);
+
+        //    return Ok(result);
+
+        //}
         [HttpGet("Quizhistory")]
         public IActionResult GetQuizHistory()
         {
