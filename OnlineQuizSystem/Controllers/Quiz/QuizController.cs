@@ -54,20 +54,38 @@ namespace PresentationAPI.Controllers.Quiz
             return Ok(result);
 
         }
-
         [HttpGet("Quizhistory")]
-        public async Task<IActionResult> GetQuizHistory()
+        public IActionResult GetQuizHistory()
         {
-            var result = await quizService.GetQuizHistoryAsync();
+            var result = quizService.GetQuizHistory();
             if (result.Data == null)
                 return NotFound(result);
             return Ok(result);
         }
 
+
+        //[HttpGet("Quizhistory")]
+        //public async Task<IActionResult> GetQuizHistory()
+        //{
+        //    var result = await quizService.GetQuizHistoryAsync();
+        //    if (result.Data == null)
+        //        return NotFound(result);
+        //    return Ok(result);
+        //}
+
+        //[HttpGet("Quizdetails")]
+        //public async Task<IActionResult> GetQuizDetails(long quizId)
+        //{
+        //    var result = await quizService.GetQuizDetailsAsync(quizId);
+        //    if (result == null)
+        //        return NotFound("Quiz not found or has no questions.");
+        //    return Ok(result);
+        //}
+
         [HttpGet("Quizdetails")]
-        public async Task<IActionResult> GetQuizDetails(long quizId)
+        public IActionResult GetQuizDetails(long quizId)
         {
-            var result = await quizService.GetQuizDetailsAsync(quizId);
+            var result = quizService.GetQuizDetails(quizId);
             if (result == null)
                 return NotFound("Quiz not found or has no questions.");
             return Ok(result);
