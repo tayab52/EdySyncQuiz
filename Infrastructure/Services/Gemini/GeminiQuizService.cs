@@ -200,7 +200,7 @@ namespace Infrastructure.Services.Gemini
                 _ => "Intermediate Level",
             };
 
-            int finalQuestionCount = model.QuestionCount ?? Random.Shared.Next(2, 7);
+            int finalQuestionCount = model.QuestionCount ?? Random.Shared.Next(10, 15);
 
             string topicInstruction = string.IsNullOrEmpty(model.SubTopic)
                 ? $"the topic: '{model.Topic}'"

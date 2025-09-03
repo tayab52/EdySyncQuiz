@@ -18,6 +18,10 @@ namespace PresentationAPI.Controllers.Quiz
         [HttpGet("generate")]
         public IActionResult GenerateQuiz([FromQuery] QuizVM model)
         {
+            // Ensure Topic is not null or whitespace
+            model.Topic = string.IsNullOrWhiteSpace(model.Topic) ? string.Empty : model.Topic.Trim();
+            // Ensure SubTopic is not null
+            model.SubTopic = string.IsNullOrWhiteSpace(model.SubTopic) ? string.Empty : model.SubTopic.Trim();
             var result = quizService.GenerateQuiz(model);
             return Ok(result);
         }
