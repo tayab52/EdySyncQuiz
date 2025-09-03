@@ -73,5 +73,6 @@ namespace Infrastructure.Context
         public DbSet<Question> Questions { get; set; }
         public DbSet<Option> Options { get; set; }
         public DbSet<Answer> Answers { get; set; }
+        public DbSet<Language> Languages { get; set; }
     }
 }

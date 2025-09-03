@@ -15,7 +15,7 @@ namespace PresentationAPI.Controllers.Language
             ResponseVM response = ResponseVM.Instance;
 
             var results = Methods.ExecuteStoredProceduresList("SP_GetLanguages", null!);
-            var languages = results.Result.Select(lang => (string)lang.Language).ToList();
+            var languages = results.Result.Select(lang => (string)lang.LanguageName).ToList();
 
             if (!results.Result.Any())
             {
