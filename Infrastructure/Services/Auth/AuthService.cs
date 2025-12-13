@@ -232,10 +232,45 @@ namespace Infrastructure.Services.Auth
             return tokenHandler.WriteToken(securityToken);
         }
 
+        //public ResponseVM SendOTP(string email, string? subject = "Welcome To TopicTap")
+        //{
+        //    ResponseVM response = ResponseVM.Instance;
+        //    long OTP = Methods.GenerateOTP();
+        //    string template = $"Your OTP to register account is: {OTP}";
+        //    string emailSubject = subject!;
+        //    string emailBody = template;
+
+        //    try
+        //    {
+        //        SendEmail(email, emailSubject, emailBody);
+        //        response.StatusCode = ResponseCode.Success;
+        //        response.Data = OTP;
+
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        response.StatusCode = ResponseCode.BadRequest;
+        //        response.ResponseMessage = "Failed to send email: " + ex.Message;
+        //    }
+        //    return response;
+        //}
         public ResponseVM SendOTP(string email, string? subject = "Welcome To TopicTap")
         {
             ResponseVM response = ResponseVM.Instance;
             long OTP = Methods.GenerateOTP();
+
+            response.Data = OTP;
+            response.StatusCode = ResponseCode.Success;
+
+            // TEMPORARY: Skip sending email in development
+            var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+            if (env == "Development")
+            {
+                Console.WriteLine($"[DEV] OTP for {email}: {OTP}");
+                response.ResponseMessage = "[DEV] OTP generated, email not sent.";
+                return response;
+            }
+
             string template = $"Your OTP to register account is: {OTP}";
             string emailSubject = subject!;
             string emailBody = template;
@@ -243,15 +278,14 @@ namespace Infrastructure.Services.Auth
             try
             {
                 SendEmail(email, emailSubject, emailBody);
-                response.StatusCode = ResponseCode.Success;
-                response.Data = OTP;
-
+                response.ResponseMessage = "OTP sent successfully.";
             }
             catch (Exception ex)
             {
                 response.StatusCode = ResponseCode.BadRequest;
                 response.ResponseMessage = "Failed to send email: " + ex.Message;
             }
+
             return response;
         }
 
@@ -276,10 +310,12 @@ namespace Infrastructure.Services.Auth
                 response.ErrorMessage = "User not found.";
                 return response;
             }
+
             string subject = operation == "forgot-password"
                 ? "Reset OTP for TopicTap account"
                 : "Resend OTP for TopicTap";
 
+            // Use the adjusted SendOTP
             var otpResponse = SendOTP(user.Email, subject);
 
             if (otpResponse.StatusCode != ResponseCode.Success)
@@ -301,7 +337,7 @@ namespace Infrastructure.Services.Auth
                 response.StatusCode = ResponseCode.Success;
                 response.ResponseMessage = operation == "forgot-password"
                     ? "OTP to reset account sent successfully"
-                    : "OTP resent successfully.";
+                    : "[DEV] OTP resent successfully, email not sent.";
                 return response;
             }
             catch
@@ -311,6 +347,65 @@ namespace Infrastructure.Services.Auth
                 return response;
             }
         }
+
+
+
+        //public ResponseVM ResendOTP(string email, string? operation = "resend-otp")
+        //{
+        //    ResponseVM response = ResponseVM.Instance;
+
+        //    if (string.IsNullOrWhiteSpace(email))
+        //    {
+        //        response.StatusCode = ResponseCode.BadRequest;
+        //        response.ErrorMessage = "Email is required.";
+        //        return response;
+        //    }
+
+        //    var normalizedEmail = email.Trim().ToLowerInvariant();
+        //    var user = _appDBContext.Users
+        //        .FirstOrDefault(u => u.Email.ToLower() == normalizedEmail);
+
+        //    if (user == null)
+        //    {
+        //        response.StatusCode = ResponseCode.NotFound;
+        //        response.ErrorMessage = "User not found.";
+        //        return response;
+        //    }
+        //    string subject = operation == "forgot-password"
+        //        ? "Reset OTP for TopicTap account"
+        //        : "Resend OTP for TopicTap";
+
+        //    var otpResponse = SendOTP(user.Email, subject);
+
+        //    if (otpResponse.StatusCode != ResponseCode.Success)
+        //        return otpResponse;
+
+        //    if (otpResponse.Data is not long otp)
+        //    {
+        //        response.StatusCode = ResponseCode.BadRequest;
+        //        response.ErrorMessage = "Invalid OTP value returned.";
+        //        return response;
+        //    }
+
+        //    user.OTP = otp;
+        //    user.OTPExpiry = DateTime.UtcNow.AddMinutes(60);
+
+        //    try
+        //    {
+        //        _appDBContext.SaveChanges();
+        //        response.StatusCode = ResponseCode.Success;
+        //        response.ResponseMessage = operation == "forgot-password"
+        //            ? "OTP to reset account sent successfully"
+        //            : "OTP resent successfully.";
+        //        return response;
+        //    }
+        //    catch
+        //    {
+        //        response.StatusCode = ResponseCode.BadRequest;
+        //        response.ErrorMessage = "Failed to update user OTP.";
+        //        return response;
+        //    }
+        //}
         public ResponseVM VerifyOTP(string email, long otp)
         {
             ResponseVM response = ResponseVM.Instance;

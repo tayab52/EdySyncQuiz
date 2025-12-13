@@ -182,6 +182,175 @@ namespace Infrastructure.Services.Gemini
             }
             return response;
         }
+        public ResponseVM GenerateQuizForUser(QuizVM model, long userId)
+        {
+            ResponseVM response = ResponseVM.Instance;
+            try
+            {
+                var user = _dbContext.Users
+                    .FirstOrDefault(u => u.UserID == userId);
+
+                if (user == null)
+                {
+                    response.StatusCode = 404;
+                    response.ErrorMessage = "User not found.";
+                    return response;
+                }
+
+                int userLevel = user?.Level ?? 1; // Default to 1 if null
+
+                string difficultyLevel = userLevel switch
+                {
+                    0 => "Entry Level",
+                    1 => "Basic Level",
+                    2 => "Middle Level",
+                    3 => "Advanced Level",
+                    _ => "Intermediate Level",
+                };
+
+                int finalQuestionCount = model.QuestionCount ?? Random.Shared.Next(10, 15);
+
+                string topicInstruction = string.IsNullOrEmpty(model.SubTopic)
+                    ? $"the topic: '{model.Topic}'"
+                    : $"the topic: '{model.Topic}', with specific focus on subtopic: '{model.SubTopic}'";
+
+                string prompt = $@"
+                    You are a quiz generator agent. Create a quiz with {finalQuestionCount} multiple choice questions based on {topicInstruction}.
+                    The quiz should be suitable for {difficultyLevel} students.
+
+                    IMPORTANT INSTRUCTIONS:
+                    - Each question must have 2-6 multiple choice options
+                    - Provide a one line explanation for each question
+                    - If subtopic is not relevant to the main topic, focus only on the main topic
+
+                    Respond in JSON format EXACTLY like this:
+                    [
+                      {{
+                        ""question"": ""What is the capital of France?"",
+                        ""options"": [""Paris"", ""London"", ""Berlin"", ""Madrid""],
+                        ""correctOption"": ""Paris"",
+                        ""explanation"": ""Paris is the capital and largest city of France.""
+                      }}
+                    ]";
+
+                var body = new
+                {
+                    contents = new[]
+                    {
+                        new
+                        {
+                            role = "user",
+                            parts = new[]
+                            {
+                                new { text = prompt }
+                            }
+                        }
+                    }
+                };
+
+                var json = JsonSerializer.Serialize(body);
+                var contentPayload = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                var endpoint = $"{_endpoint}?key={_apiKey}";
+                var resp = _httpClient.PostAsync(endpoint, contentPayload).Result;
+
+                if (!resp.IsSuccessStatusCode)
+                {
+                    var errorContent = resp.Content.ReadAsStringAsync().Result;
+                    Console.WriteLine($"Gemini API Error: {resp.StatusCode} - {errorContent}");
+                    response.StatusCode = (int)resp.StatusCode;
+                    response.ErrorMessage = $"Gemini API Error: {resp.StatusCode}";
+                    return response;
+                }
+
+                var responseString = resp.Content.ReadAsStringAsync().Result;
+
+                using var doc = JsonDocument.Parse(responseString);
+                var parts = doc.RootElement
+                    .GetProperty("candidates")[0]
+                    .GetProperty("content")
+                    .GetProperty("parts");
+
+                var quizJson = parts[0].GetProperty("text").GetString();
+                quizJson = Methods.CleanJsonResponse(quizJson);
+
+                var quizItems = JsonSerializer.Deserialize<List<GeminiResponseVM>>(quizJson, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                if (quizItems == null || !quizItems.Any())
+                {
+                    response.StatusCode = 404;
+                    response.ErrorMessage = "Failed to deserialize quiz items or empty result from Gemini API.";
+                    return response;
+                }
+
+                var questions = new List<Question>();
+                var options = new List<Option>();
+                var quiz = new Quiz
+                {
+                    Topic = model.Topic,
+                    SubTopic = model.SubTopic ?? "",
+                    TotalQuestions = finalQuestionCount,
+                    IsCompleted = false,
+                    UserID = userId
+                };
+                _dbContext.Quizzes.Add(quiz);
+                _dbContext.SaveChanges();
+
+                foreach (var item in quizItems)
+                {
+                    var question = new Question
+                    {
+                        QuestionText = item.question,
+                        Explanation = item.explanation ?? "",
+                        IsCorrect = false,
+                        QuizID = quiz.ID
+                    };
+                    questions.Add(question);
+                }
+
+                _dbContext.Questions.AddRange(questions);
+                _dbContext.SaveChanges();
+
+                int i = 0;
+                foreach (var item in quizItems)
+                {
+                    var questionId = questions[i].ID;
+                    foreach (var opt in item.options)
+                    {
+                        bool isCorrect = string.Equals(
+                            opt.Trim(),
+                            item.correctOption.Trim(),
+                            StringComparison.OrdinalIgnoreCase
+                        );
+                        options.Add(new Option
+                        {
+                            OptionText = opt,
+                            IsCorrect = isCorrect,
+                            QuestionID = questionId
+                        });
+                    }
+                    i++;
+                }
+                _dbContext.Options.AddRange(options);
+                _dbContext.SaveChanges();
+
+                var allQuestionsResponse = GetAllQuizQuestions(quiz.ID);
+                allQuestionsResponse.ResponseMessage = "Quiz generated and fetched successfully.";
+                allQuestionsResponse.StatusCode = 200;
+                return allQuestionsResponse;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in GenerateQuizForUser: {ex.Message}");
+                Console.WriteLine($"Stack Trace: {ex.StackTrace}");
+                response.StatusCode = 500;
+                response.ErrorMessage = $"Error: {ex.Message}";
+                return response;
+            }
+        }
 
         public ResponseVM GenerateQuiz(QuizVM model)
         {
@@ -445,7 +614,7 @@ namespace Infrastructure.Services.Gemini
         //            ""explanation"": ""Paris is the capital and largest city of France.""
         //          }}
         //        ]
-
+        //
         //        Make sure each question has the exact format above with question, options array, correctOption, and explanation.";
 
         //    var body = new
@@ -571,15 +740,68 @@ namespace Infrastructure.Services.Gemini
         //        return null;
         //    }
         //}
+        public async Task<ResponseVM> GetQuizQuestionsByNumberAsync(long quizID, long questionID)
+        {
+            ResponseVM response = ResponseVM.Instance;
+            try
+            {
+                var parameters = new DynamicParameters();
+                parameters.Add("@QuizID", quizID);
+                parameters.Add("@QuestionID", questionID);
 
+                var result = await Methods.ExecuteStoredProceduresList("SP_GetQuizQuestionByNumber", parameters);
+
+                if (result == null || !result.Any())
+                {
+                    response.StatusCode = 404;
+                    response.ResponseMessage = "Question not found.";
+                    return response;
+                }
+
+                // Build single question VM from flat rows (options per row)
+                var firstRow = result.First();
+                var questionVM = new QuizQuestionVM
+                {
+                    Question = firstRow.QuestionText,
+                    Explanation = firstRow.Explanation,
+                    Options = new List<QuizOptionVM>()
+                };
+
+                foreach (var row in result)
+                {
+                    questionVM.Options.Add(new QuizOptionVM
+                    {
+                        OptionText = row.OptionText,
+                        IsCorrect = row.IsCorrect
+                    });
+                }
+
+                response.StatusCode = 200;
+                response.ResponseMessage = "Question fetched successfully.";
+                response.Data = questionVM;
+            }
+            catch (Exception ex)
+            {
+                response.StatusCode = 500;
+                response.ErrorMessage = "Error: " + ex.Message;
+            }
+            return response;
+        }
         public ResponseVM GetAllQuizQuestions(long quizId)
         {
             ResponseVM response = ResponseVM.Instance;
             var parameters = new DynamicParameters();
             parameters.Add("@QuizID", quizId);
 
-            // Synchronous call
             var result = Methods.ExecuteStoredProceduresList("SP_GetAllQuizQuestions", parameters).Result;
+
+            if (result == null || !result.Any())
+            {
+                response.StatusCode = 404;
+                response.ResponseMessage = "No quiz or questions found for this quiz.";
+                response.Data = null;
+                return response;
+            }
 
             var questionsDict = new Dictionary<long, QuizQuestionVM>();
             var questionsList = new List<QuizQuestionVM>();
@@ -813,6 +1035,72 @@ namespace Infrastructure.Services.Gemini
 
         //}
 
+        public ResponseVM ResultSubmittedForUser(ResultSubmittedVM model, long userId)
+        {
+            ResponseVM response = ResponseVM.Instance;
+            try
+            {
+                if (model == null)
+                {
+                    response.StatusCode = 400;
+                    response.ErrorMessage = "Invalid result submission data.";
+                    return response;
+                }
+
+                var user = _dbContext.Users
+                    .FirstOrDefault(u => u.UserID == userId);
+
+                if (user == null)
+                {
+                    response.StatusCode = 404;
+                    response.ErrorMessage = "User not found.";
+                    return response;
+                }
+
+                var quiz = _dbContext.Quizzes
+                    .FirstOrDefault(q => q.ID == model.QuizID && q.UserID == user.UserID);
+
+                if (quiz == null)
+                {
+                    response.StatusCode = 404;
+                    response.ErrorMessage = "Quiz not found.";
+                    return response;
+                }
+
+                // 1. Update quiz
+                quiz.IsCompleted = true;
+                quiz.CorrectQuestionCount = model.NoOfCorrectQuestions;
+                quiz.IncorrectQuestionCount = model.NoOfIncorrectQuestions;
+                quiz.TotalScore = model.TotalScore;
+                quiz.ObtainedScore = model.ObtainedScore;
+                _dbContext.Quizzes.Update(quiz);
+
+                // 2. Update questions' IsCorrect flags
+                var questions = _dbContext.Questions
+                    .Where(q => q.QuizID == quiz.ID)
+                    .ToList();
+
+                foreach (var question in questions)
+                {
+                    question.IsCorrect = model.CorrectQuestionIds != null && model.CorrectQuestionIds.Contains(question.ID);
+                }
+
+                _dbContext.Questions.UpdateRange(questions);
+
+                _dbContext.SaveChanges();
+
+                response.StatusCode = 200;
+                response.ResponseMessage = "Results submitted successfully.";
+            }
+            catch (Exception ex)
+            {
+                response.StatusCode = 500;
+                response.ErrorMessage = $"Error: {ex.Message}";
+            }
+
+            return response;
+        }
+
         public async Task<ResponseVM> GetQuizQuestionsByNumberAsync(long quizID, int QuestionNumber)
         {
                 ResponseVM response = ResponseVM.Instance;
@@ -864,6 +1152,7 @@ namespace Infrastructure.Services.Gemini
             return response;
 
         }
+        
 
 
 

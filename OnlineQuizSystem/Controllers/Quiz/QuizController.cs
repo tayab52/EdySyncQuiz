@@ -18,13 +18,15 @@ namespace PresentationAPI.Controllers.Quiz
         [HttpGet("generate")]
         public IActionResult GenerateQuiz([FromQuery] QuizVM model)
         {
-            // Ensure Topic is not null or whitespace
             model.Topic = string.IsNullOrWhiteSpace(model.Topic) ? string.Empty : model.Topic.Trim();
-            // Ensure SubTopic is not null
             model.SubTopic = string.IsNullOrWhiteSpace(model.SubTopic) ? string.Empty : model.SubTopic.Trim();
             var result = quizService.GenerateQuiz(model);
+
+            if (result == null || result.Data == null || !(result.Data as IEnumerable<object>)?.Any() == true)
+                return NotFound(new { StatusCode = 404, ErrorMessage = "No questions found for the given topic/subtopic." });
+
             return Ok(result);
-        }
+        }  
 
         [HttpGet("quiz/{quizId:long}/questions")]
         public IActionResult GetAllQuizQuestions(long quizId)
@@ -54,6 +56,7 @@ namespace PresentationAPI.Controllers.Quiz
 
         public async Task<IActionResult> GetQuizQuestionsByNumber(long quizId, int questionNumber)
         {
+            
             var result = await quizService.GetQuizQuestionsByNumberAsync(quizId, questionNumber);
             if (result.Data == null)
                 return NotFound(result);
@@ -118,6 +121,14 @@ namespace PresentationAPI.Controllers.Quiz
             var result = quizService.GetQuizDetails(quizId);
             if (result == null)
                 return NotFound("Quiz not found or has no questions.");
+            return Ok(result);
+        }
+        [HttpGet("quiz/{quizId:long}/questions/{questionId:long}")]
+        public async Task<IActionResult> GetQuizQuestionsById(long quizId, long questionId)
+        {
+            var result = await quizService.GetQuizQuestionsByNumberAsync(quizId, questionId);
+            if (result.Data == null)
+                return NotFound(result);
             return Ok(result);
         }
     }

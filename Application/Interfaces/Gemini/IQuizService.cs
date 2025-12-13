@@ -15,7 +15,7 @@ namespace Application.Interfaces.Gemini
         //Task<ResponseVM> GenerateQuizAsync(QuizVM model);
         //Task<ResponseVM> GetAllQuizQuestionsAsync(long quizId);
 
-        Task<ResponseVM> GetQuizQuestionsByNumberAsync(long quizId, int questionNumber);
+        Task<ResponseVM> GetQuizQuestionsByNumberAsync(long quizId, long questionId);
         ResponseVM ResultSubmitted(ResultSubmittedVM model);
         //Task<ResponseVM> ResultSubmittedAsync(ResultSubmittedVM model);
 
@@ -24,7 +24,9 @@ namespace Application.Interfaces.Gemini
         //Task<ResponseVM> GetQuizDetailsAsync(long quizId);
 
         ResponseVM GetQuizDetails(long quizId);
+        ResponseVM GenerateQuizForUser(QuizVM model, long userId);
 
 
+        ResponseVM ResultSubmittedForUser(ResultSubmittedVM model, long userId);
     }
 }

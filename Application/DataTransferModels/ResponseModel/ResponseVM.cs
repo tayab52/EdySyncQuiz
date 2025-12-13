@@ -9,7 +9,7 @@
 
         private static ResponseVM? instance = null;
 
-        private ResponseVM()
+        public ResponseVM()
         {
         }
 
