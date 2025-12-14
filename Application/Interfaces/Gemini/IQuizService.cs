@@ -23,6 +23,8 @@ namespace Application.Interfaces.Gemini
         //Task<ResponseVM> GetQuizHistoryAsync();
         //Task<ResponseVM> GetQuizDetailsAsync(long quizId);
 
+
+
         ResponseVM GetQuizDetails(long quizId);
         ResponseVM GenerateQuizForUser(QuizVM model, long userId);
 
