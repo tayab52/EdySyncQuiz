@@ -13,13 +13,14 @@ namespace Domain.Models.Entities.Quiz
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         [Key]
         public long ID { get; set; }
-        [Column(TypeName = "NVARCHAR(250)")]       
+        [Column(TypeName = "NVARCHAR(250)")]
         public string Topic { get; set; } = string.Empty;
         [Column(TypeName = "NVARCHAR(250)")]
         public string SubTopic { get; set; } = string.Empty;
         public int? TotalQuestions { get; set; } = 0;
         public bool IsCompleted { get; set; } = false;
         public long UserID { get; set; }
+        public long? ExternalUserId { get; set; } // MCP user id reference
 
         public int CorrectQuestionCount { get; set; } = 0;
         public int IncorrectQuestionCount { get; set; } = 0;

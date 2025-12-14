@@ -1,0 +1,16 @@
+bin/
+obj/
+**/*.user
+**/*.swp
+**/*.tmp
+**/.vs
+**/node_modules
+**/*.db
+**/*.mdf
+**/*.ldf
+**/*.log
+**/appsettings.Development.json
+**/appsettings.Local.json
+**/*.secrets.json
+Dockerfile
+docker-compose.yml

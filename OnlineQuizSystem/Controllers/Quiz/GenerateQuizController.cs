@@ -1,7 +1,9 @@
-﻿using Application.DataTransferModels.ResponseModel;
-using Application.DataTransferModels.QuizViewModels;
-using Application.Interfaces.Gemini; // Keep interface reference
+﻿using Application.DataTransferModels.QuizViewModels;
+using Application.DataTransferModels.ResponseModel;
+using Application.Interfaces.Gemini;
+using Infrastructure.Context;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace PresentationAPI.Controllers.Quiz
 {
@@ -10,268 +12,226 @@ namespace PresentationAPI.Controllers.Quiz
     public class GenerateQuizController : ControllerBase
     {
         private readonly IQuizService _quizService;
+        private readonly AppDBContext _dbContext;
 
-        public GenerateQuizController(IQuizService quizService)
+        public GenerateQuizController(IQuizService quizService, AppDBContext dbContext)
         {
             _quizService = quizService;
+            _dbContext = dbContext;
         }
+
+        // Tool 1: generate_quiz
         [HttpGet("generateQuiz")]
         public IActionResult GenerateQuiz([FromQuery] QuizVM model, [FromQuery] long? userId)
         {
             var response = new ResponseVM();
 
-            model.Topic = string.IsNullOrWhiteSpace(model.Topic) ? string.Empty : model.Topic.Trim();
-            model.SubTopic = string.IsNullOrWhiteSpace(model.SubTopic) ? string.Empty : model.SubTopic.Trim();
-
-            try
-            {
-                ResponseVM result;
-                if (userId.HasValue)
-                {
-                    // Use the MCP/no-auth path with explicit userId
-                    result = _quizService.GenerateQuizForUser(model, userId.Value);
-                }
-                else
-                {
-                    // Normal path (uses TokenService/User from auth)
-                    result = _quizService.GenerateQuiz(model);
-                }
-
-                if (result == null || result.Data == null)
-                {
-                    response.StatusCode = 204;
-                    response.ResponseMessage = "No questions generated.";
-                    return Ok(response);
-                }
-
-                response.StatusCode = 200;
-                response.ResponseMessage = "Quiz generated successfully.";
-                response.Data = result.Data;
-            }
-            catch (Exception ex)
-            {
-                response.StatusCode = 500;
-                response.ErrorMessage = $"Error generating quiz: {ex.Message}";
-            }
-
-            return Ok(response);
-        }
-
-        [HttpGet("generate")]
-        public IActionResult GenerateQuiz([FromQuery] QuizVM model)
-        {
-            var response = new ResponseVM();
-
-            model.Topic = string.IsNullOrWhiteSpace(model.Topic) ? string.Empty : model.Topic.Trim();
-            model.SubTopic = string.IsNullOrWhiteSpace(model.SubTopic) ? string.Empty : model.SubTopic.Trim();
-
-            try
-            {
-                var result = _quizService.GenerateQuiz(model);
-
-                if (result.Data == null)
-                {
-                    response.StatusCode = 204;
-                    response.ResponseMessage = "No questions generated.";
-                    return Ok(response);
-                }
-
-                response.StatusCode = 200;
-                response.ResponseMessage = "Quiz generated successfully.";
-                response.Data = result.Data;
-            }
-            catch (Exception ex)
-            {
-                response.StatusCode = 500;
-                response.ErrorMessage = $"Error generating quiz: {ex.Message}";
-            }
-
-            return Ok(response);
-        }
-
-        [HttpGet("{quizId:long}/questions")]
-        public IActionResult GetAllQuestions(long quizId)
-        {
-            var response = new ResponseVM();
-
-            try
-            {
-                var result = _quizService.GetAllQuizQuestions(quizId);
-
-                if (result.Data == null)
-                {
-                    response.StatusCode = 404;
-                    response.ErrorMessage = "No questions found for this quiz.";
-                    return Ok(response);
-                }
-
-                response.StatusCode = 200;
-                response.ResponseMessage = "Questions retrieved successfully.";
-                response.Data = result.Data;
-            }
-            catch (Exception ex)
-            {
-                response.StatusCode = 500;
-                response.ErrorMessage = $"Error retrieving questions: {ex.Message}";
-            }
-
-            return Ok(response);
-        }
-        [HttpGet("quiz/{quizId:long}/questions/{questionNumber:int}")]
-        public async Task<IActionResult> GetQuizQuestionsByNumber(long quizId, int questionNumber)
-        {
-            var response = ResponseVM.Instance;
-
-            try
-            {
-                var result = await _quizService.GetQuizQuestionsByNumberAsync(quizId, questionNumber);
-
-                if (result.Data == null)
-                {
-                    response.StatusCode = 404;
-                    response.ErrorMessage = "Question not found.";
-                    return Ok(response);
-                }
-
-                response.StatusCode = 200;
-                response.ResponseMessage = "Question retrieved successfully.";
-                response.Data = result.Data;
-            }
-            catch (Exception ex)
-            {
-                response.StatusCode = 500;
-                response.ErrorMessage = $"Error retrieving question: {ex.Message}";
-            }
-
-            return Ok(response);
-        }
-
-        [HttpPost("resultSubmitted")]
-        public IActionResult ResultSubmitted([FromBody] ResultSubmittedVM model)
-        {
-            var response = ResponseVM.Instance;
-
-            if (model == null)
+            // Basic validation
+            if (string.IsNullOrWhiteSpace(model.Topic))
             {
                 response.StatusCode = 400;
-                response.ErrorMessage = "Invalid result submission data.";
+                response.ErrorMessage = "Topic is required.";
+                return Ok(response);
+            }
+            model.Topic = model.Topic.Trim();
+            model.SubTopic = (model.SubTopic ?? string.Empty).Trim();
+
+            try
+            {
+                ResponseVM result = userId.HasValue
+                    ? _quizService.GenerateQuizForUser(model, userId.Value)
+                    : _quizService.GenerateQuiz(model);
+
+                if (result == null)
+                {
+                    response.StatusCode = 500;
+                    response.ErrorMessage = "Quiz generation failed.";
+                    return Ok(response);
+                }
+
+                if (result.Data == null)
+                {
+                    response.StatusCode = result.StatusCode != 0 ? result.StatusCode : 404;
+                    response.ErrorMessage = string.IsNullOrWhiteSpace(result.ErrorMessage)
+                        ? "No questions generated."
+                        : result.ErrorMessage;
+                    response.ResponseMessage = result.ResponseMessage;
+                    return Ok(response);
+                }
+
+                response.StatusCode = 200;
+                response.ResponseMessage = "Quiz generated successfully.";
+                response.Data = result.Data;
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                response.StatusCode = 500;
+                response.ErrorMessage = $"Error generating quiz: {ex.Message}";
+                return Ok(response);
+            }
+        }
+
+        // Tool 2: submit_quiz_result_for_user
+        [HttpPost("resultSubmittedForUser")]
+        public ResponseVM ResultSubmittedForUser(ResultSubmittedVM model, long userId)
+        {
+            ResponseVM response = ResponseVM.Instance;
+            try
+            {
+                if (model == null)
+                {
+                    response.StatusCode = 400;
+                    response.ErrorMessage = "Invalid result submission data.";
+                    return response;
+                }
+
+                var user = _dbContext.Users.FirstOrDefault(u => u.UserID == userId);
+                if (user == null)
+                {
+                    response.StatusCode = 404;
+                    response.ErrorMessage = "User not found.";
+                    return response;
+                }
+
+                var quiz = _dbContext.Quizzes.FirstOrDefault(q => q.ID == model.QuizID && q.UserID == user.UserID);
+                if (quiz == null)
+                {
+                    response.StatusCode = 404;
+                    response.ErrorMessage = "Quiz not found.";
+                    return response;
+                }
+
+                // Load quiz questions
+                var questions = _dbContext.Questions.Where(q => q.QuizID == quiz.ID).ToList();
+                if (questions.Count == 0)
+                {
+                    response.StatusCode = 404;
+                    response.ErrorMessage = "Quiz has no questions.";
+                    return response;
+                }
+
+                // Validate counts do not exceed total questions
+                var answeredCount = model.NoOfCorrectQuestions + model.NoOfIncorrectQuestions;
+                if (answeredCount > questions.Count)
+                {
+                    response.StatusCode = 400;
+                    response.ErrorMessage = $"Answered count ({answeredCount}) cannot exceed total quiz questions ({questions.Count}).";
+                    return response;
+                }
+
+                // Validate correctQuestionIds membership and count coherence
+                var quizQuestionIds = questions.Select(q => q.ID).ToHashSet();
+                var providedIds = model.CorrectQuestionIds ?? new List<long>();
+                var invalidIds = providedIds.Where(id => !quizQuestionIds.Contains(id)).Distinct().ToList();
+                if (invalidIds.Count > 0)
+                {
+                    response.StatusCode = 400;
+                    response.ErrorMessage = $"Invalid correctQuestionIds for quiz {model.QuizID}: {string.Join(", ", invalidIds)}.";
+                    return response;
+                }
+
+                if (providedIds.Count != model.NoOfCorrectQuestions)
+                {
+                    response.StatusCode = 400;
+                    response.ErrorMessage = "noOfCorrectQuestions must match the number of provided correctQuestionIds.";
+                    return response;
+                }
+
+                // Update quiz
+                quiz.IsCompleted = true;
+                quiz.CorrectQuestionCount = model.NoOfCorrectQuestions;
+                quiz.IncorrectQuestionCount = model.NoOfIncorrectQuestions;
+                quiz.TotalScore = model.TotalScore;
+                quiz.ObtainedScore = model.ObtainedScore;
+                _dbContext.Quizzes.Update(quiz);
+
+                // Update question IsCorrect flags strictly based on provided IDs
+                foreach (var question in questions)
+                {
+                    question.IsCorrect = providedIds.Contains(question.ID);
+                }
+                _dbContext.Questions.UpdateRange(questions);
+
+                _dbContext.SaveChanges();
+
+                response.StatusCode = 200;
+                response.ResponseMessage = "Results submitted successfully.";
+            }
+            catch (Exception ex)
+            {
+                response.StatusCode = 500;
+                response.ErrorMessage = $"Error: {ex.Message}";
+            }
+
+            return response;
+        }
+        // Tool 3: get_quiz_details
+        [HttpGet("Quizdetails")]
+        public IActionResult GetQuizDetails([FromQuery] long quizId, [FromQuery] long? userId)
+        {
+            var response = ResponseVM.Instance;
+            if (quizId <= 0)
+            {
+                response.StatusCode = 400;
+                response.ErrorMessage = "quizId is required and must be positive.";
                 return Ok(response);
             }
 
             try
             {
-                var result = _quizService.ResultSubmitted(model);
-                response.StatusCode = 200;
-                response.ResponseMessage = "Result submitted successfully.";
-                response.Data = result.Data;
-            }
-            catch (Exception ex)
-            {
-                response.StatusCode = 500;
-                response.ErrorMessage = $"Error submitting result: {ex.Message}";
-            }
+                var result = userId.HasValue
+                    ? _quizService.GetQuizDetailsForUser(quizId, userId.Value)
+                    : _quizService.GetQuizDetails(quizId);
 
-            return Ok(response);
-        }
-
-        [HttpGet("Quizdetails")]
-        public IActionResult GetQuizDetails(long quizId)
-        {
-            var response = ResponseVM.Instance;
-
-            try
-            {
-                var result = _quizService.GetQuizDetails(quizId);
-
-                if (result == null)
+                if (result == null || result.Data == null)
                 {
-                    response.StatusCode = 404;
-                    response.ErrorMessage = "Quiz not found or has no questions.";
+                    response.StatusCode = result?.StatusCode ?? 404;
+                    response.ErrorMessage = result?.ErrorMessage ?? "Quiz not found or has no questions.";
                     return Ok(response);
                 }
 
                 response.StatusCode = 200;
                 response.ResponseMessage = "Quiz details retrieved successfully.";
                 response.Data = result.Data;
+                return Ok(response);
             }
             catch (Exception ex)
             {
                 response.StatusCode = 500;
                 response.ErrorMessage = $"Error retrieving quiz details: {ex.Message}";
+                return Ok(response);
             }
-
-            return Ok(response);
         }
+
         [HttpGet("Quizhistory")]
-        public IActionResult GetQuizHistory()
+        public IActionResult GetQuizHistory([FromQuery] long? userId)
         {
             var response = ResponseVM.Instance;
-
             try
             {
-                var result = _quizService.GetQuizHistory();
+                var result = userId.HasValue
+                    ? _quizService.GetQuizHistoryForUser(userId.Value)
+                    : _quizService.GetQuizHistory();
 
-                if (result.Data == null)
+                if (result == null || result.Data == null)
                 {
-                    response.StatusCode = 404;
-                    response.ErrorMessage = "No quiz history found.";
+                    response.StatusCode = result?.StatusCode ?? 404;
+                    response.ErrorMessage = result?.ErrorMessage ?? "No quiz history found.";
                     return Ok(response);
                 }
 
                 response.StatusCode = 200;
                 response.ResponseMessage = "Quiz history retrieved successfully.";
                 response.Data = result.Data;
+                return Ok(response);
             }
             catch (Exception ex)
             {
                 response.StatusCode = 500;
                 response.ErrorMessage = $"Error retrieving quiz history: {ex.Message}";
-            }
-
-            return Ok(response);
-        }
-        [HttpPost("resultSubmittedForUser")]
-        public IActionResult ResultSubmittedForUser([FromBody] ResultSubmittedVM model, [FromQuery] long? userId)
-        {
-            var response = ResponseVM.Instance;
-
-            if (model == null)
-            {
-                response.StatusCode = 400;
-                response.ErrorMessage = "Invalid result submission data.";
                 return Ok(response);
             }
-
-            if (!userId.HasValue)
-            {
-                response.StatusCode = 400;
-                response.ErrorMessage = "Missing userId query parameter.";
-                return Ok(response);
-            }
-
-            try
-            {
-                var result = _quizService.ResultSubmittedForUser(model, userId.Value);
-                if (result == null || (result.StatusCode != 200 && result.StatusCode != 0 && result.Data == null))
-                {
-                    // propagate service response if it contains error info
-                    response.StatusCode = result?.StatusCode ?? 500;
-                    response.ErrorMessage = result?.ErrorMessage ?? "Failed to submit results for user.";
-                    return Ok(response);
-                }
-
-                response.StatusCode = 200;
-                response.ResponseMessage = "Result submitted successfully for user.";
-                response.Data = result.Data;
-            }
-            catch (Exception ex)
-            {
-                response.StatusCode = 500;
-                response.ErrorMessage = $"Error submitting result for user: {ex.Message}";
-            }
-
-            return Ok(response);
         }
-
     }
 }

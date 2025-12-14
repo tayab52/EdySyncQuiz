@@ -1,0 +1,26 @@
+version: "3.9"
+services:
+  edusync-mcp:
+    build:
+      context: .
+      dockerfile: OnlineQuizSystem/Dockerfile
+    image: edusync-mcp:latest
+    container_name: edusync-mcp
+    ports:
+      - "5261:8080" # external->container
+    environment:
+      # ASP.NET
+      ASPNETCORE_ENVIRONMENT: "Production"
+      ASPNETCORE_URLS: "http://0.0.0.0:8080"
+
+      # DB
+      ConnectionStrings__ConnectionString: "Server=DESKTOP-K2CQLA0\\SQLEXPRESS;Database=OnlineQuizApp;Trusted_Connection=True;TrustServerCertificate=True"
+
+      # Gemini
+      GEMINI__APIKEY: "REPLACE_WITH_API_KEY"
+      GEMINI__ENDPOINT: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+
+      # CORS
+      AllowedOrigins__0: "http://localhost:4200"
+    # If you rely on Windows SQL Express from host, ensure network access and firewall rules allow it.
+    # For Linux containers, consider using a SQL Server container and a network alias.

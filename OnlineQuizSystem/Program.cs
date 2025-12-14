@@ -14,25 +14,20 @@ using Microsoft.OpenApi.Models;
 using PresentationAPI.InjectServices;
 using PresentationAPI.Middlewares;
 using System.Text;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ----------------------
 // 1. DATABASE CONFIG
-// ----------------------
 builder.Services.AddDbContext<AppDBContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("ConnectionString"))
 );
 
-// ----------------------
 // 2. CUSTOM SERVICES
-// ----------------------
 builder.Services.AddCustomServices();
 
-// ----------------------
 // 3. CORS
-// ----------------------
-var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>()!;
+var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? Array.Empty<string>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
@@ -44,9 +39,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-// ----------------------
 // 4. JWT AUTHENTICATION
-// ----------------------
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var secretKey = Encoding.UTF8.GetBytes(jwtSettings["Secret"]);
 var encKey = Convert.FromBase64String(jwtSettings["EncryptionKey"]);
@@ -74,14 +67,10 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// ----------------------
 // 5. CONTROLLERS
-// ----------------------
 builder.Services.AddControllers();
 
-// ----------------------
 // 6. SWAGGER
-// ----------------------
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -117,28 +106,63 @@ builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 
-// ----------------------
-// 7. MIDDLEWARE PIPELINE
-// ----------------------
+// 7. FORWARDED HEADERS (for reverse proxies / containers)
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
+
+// 8. CORS
 app.UseCors("AllowFrontend");
 
-if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
+// 9. SWAGGER
+if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+else if (app.Environment.IsProduction())
+{
+    // Keep Swagger available but inform users of route restriction
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
+// 10. HTTPS REDIRECTION (optional in containers; keep if using TLS terminator upstream)
 app.UseHttpsRedirection();
+
+// 11. GLOBAL ERROR HANDLING
 app.UseMiddleware<ErrorHandlingMiddleware>();
 
-// Only apply authentication/authorization to non-MCP routes
+// 12. AUTH: only apply to non-MCP routes
 app.UseWhen(context => !context.Request.Path.StartsWithSegments("/mcp"), appBuilder =>
 {
     appBuilder.UseAuthentication();
-    appBuilder.UseMiddleware<AuthMiddleware>(); // Apply custom auth only to normal routes
+    appBuilder.UseMiddleware<AuthMiddleware>();
     appBuilder.UseAuthorization();
 });
 
+// 13. MCP ROUTE RESTRICTION IN PRODUCTION
+if (app.Environment.IsProduction())
+{
+    app.Use(async (context, next) =>
+    {
+        var path = context.Request.Path.Value?.ToLowerInvariant() ?? string.Empty;
+        // Allow only MCP quiz endpoints
+        if (!path.StartsWith("/mcp/quiz"))
+        {
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            await context.Response.WriteAsync("Endpoint not available in MCP container.");
+            return;
+        }
+        await next();
+    });
+}
+
+// 14. MAP CONTROLLERS
 app.MapControllers();
+
+// Optional health endpoint for container readiness/liveness
+app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
 app.Run();
