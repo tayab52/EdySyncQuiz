@@ -74,32 +74,53 @@ namespace PresentationAPI.Controllers.Quiz
 
         // Tool 2: submit_quiz_result_for_user
         [HttpPost("resultSubmittedForUser")]
-        public ResponseVM ResultSubmittedForUser(ResultSubmittedVM model, long userId)
+        public IActionResult ResultSubmittedForUser([FromBody] ResultSubmittedVM model, [FromQuery] long? userId)
         {
-            ResponseVM response = ResponseVM.Instance;
+            var response = ResponseVM.Instance;
+
+            // Validation
+            if (model == null)
+            {
+                response.StatusCode = 400;
+                response.ErrorMessage = "Invalid result submission data.";
+                return Ok(response);
+            }
+            if (!userId.HasValue || userId.Value <= 0)
+            {
+                response.StatusCode = 400;
+                response.ErrorMessage = "Missing or invalid userId query parameter.";
+                return Ok(response);
+            }
+            if (model.QuizID <= 0)
+            {
+                response.StatusCode = 400;
+                response.ErrorMessage = "quizId is required and must be positive.";
+                return Ok(response);
+            }
+            if (model.NoOfCorrectQuestions < 0 || model.NoOfIncorrectQuestions < 0)
+            {
+                response.StatusCode = 400;
+                response.ErrorMessage = "Question counts must be non-negative.";
+                return Ok(response);
+            }
+            if (model.TotalScore < 0 || model.ObtainedScore < 0 || model.ObtainedScore > model.TotalScore)
+            {
+                response.StatusCode = 400;
+                response.ErrorMessage = "Scores are invalid.";
+                return Ok(response);
+            }
+
             try
             {
-                if (model == null)
-                {
-                    response.StatusCode = 400;
-                    response.ErrorMessage = "Invalid result submission data.";
-                    return response;
-                }
+                // MCP ownership: find quiz by ExternalUserId
+                var quiz = _dbContext.Quizzes
+                    .FirstOrDefault(q => q.ID == model.QuizID && q.ExternalUserId == userId.Value);
 
-                var user = _dbContext.Users.FirstOrDefault(u => u.UserID == userId);
-                if (user == null)
-                {
-                    response.StatusCode = 404;
-                    response.ErrorMessage = "User not found.";
-                    return response;
-                }
-
-                var quiz = _dbContext.Quizzes.FirstOrDefault(q => q.ID == model.QuizID && q.UserID == user.UserID);
                 if (quiz == null)
                 {
                     response.StatusCode = 404;
                     response.ErrorMessage = "Quiz not found.";
-                    return response;
+                    return Ok(response);
                 }
 
                 // Load quiz questions
@@ -108,7 +129,7 @@ namespace PresentationAPI.Controllers.Quiz
                 {
                     response.StatusCode = 404;
                     response.ErrorMessage = "Quiz has no questions.";
-                    return response;
+                    return Ok(response);
                 }
 
                 // Validate counts do not exceed total questions
@@ -117,7 +138,7 @@ namespace PresentationAPI.Controllers.Quiz
                 {
                     response.StatusCode = 400;
                     response.ErrorMessage = $"Answered count ({answeredCount}) cannot exceed total quiz questions ({questions.Count}).";
-                    return response;
+                    return Ok(response);
                 }
 
                 // Validate correctQuestionIds membership and count coherence
@@ -128,14 +149,13 @@ namespace PresentationAPI.Controllers.Quiz
                 {
                     response.StatusCode = 400;
                     response.ErrorMessage = $"Invalid correctQuestionIds for quiz {model.QuizID}: {string.Join(", ", invalidIds)}.";
-                    return response;
+                    return Ok(response);
                 }
-
                 if (providedIds.Count != model.NoOfCorrectQuestions)
                 {
                     response.StatusCode = 400;
                     response.ErrorMessage = "noOfCorrectQuestions must match the number of provided correctQuestionIds.";
-                    return response;
+                    return Ok(response);
                 }
 
                 // Update quiz
@@ -157,14 +177,14 @@ namespace PresentationAPI.Controllers.Quiz
 
                 response.StatusCode = 200;
                 response.ResponseMessage = "Results submitted successfully.";
+                return Ok(response);
             }
             catch (Exception ex)
             {
                 response.StatusCode = 500;
                 response.ErrorMessage = $"Error: {ex.Message}";
+                return Ok(response);
             }
-
-            return response;
         }
         // Tool 3: get_quiz_details
         [HttpGet("Quizdetails")]
