@@ -15,9 +15,12 @@ using PresentationAPI.InjectServices;
 using PresentationAPI.Middlewares;
 using System.Text;
 using Microsoft.AspNetCore.HttpOverrides;
+using ModelContextProtocol.Server;
+using System.ComponentModel;
+
 
 var builder = WebApplication.CreateBuilder(args);
-
+//builder.WebHost.UseUrls("http://localhost:3003");
 // 1. DATABASE CONFIG
 builder.Services.AddDbContext<AppDBContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("ConnectionString"))
@@ -103,6 +106,10 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 builder.Services.AddHttpContextAccessor();
+// 1) Register MCP server and tools
+builder.Services.AddMcpServer()
+    .WithHttpTransport()            // expose MCP over HTTP
+    .WithToolsFromAssembly();       // scan this assembly for tool classes
 
 var app = builder.Build();
 
@@ -162,6 +169,7 @@ if (app.Environment.IsProduction())
 // 14. MAP CONTROLLERS
 app.MapControllers();
 
+app.MapMcp();
 // Optional health endpoint for container readiness/liveness
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
